@@ -20,6 +20,34 @@ In Local Government Units (LGUs) across Camarines Sur—empirically benchmarked 
 
 ---
 
+## Interface Walkthrough & Key Views
+
+### 1. Role-Based LGU Personnel Sign-In (`/`)
+Authentic personal credential authentication with password visibility toggle, MIS recovery guidance, and zero public portal clutter.
+![LGU Personnel Sign-In](docs/screenshots/01-staff-login.png)
+
+### 2. Municipal Assessor — FAAS Appraisal Engine & Grouped 11-Service Sidebar
+Organized using **Hick's Law** into 3 clean sidebar groups, featuring 3-track Transfer Document Verification (*Standard Sale*, *DAR/CLOA*, *Extra-Judicial*), locked statutory RA 7160 valuation math, building sub-components, and live side-by-side Draft e-TD preview.
+![Municipal Assessor FAAS Appraisal Engine](docs/screenshots/02-assessor-faas.png)
+
+### 3. Municipal Assessor — Frontline Certifications & CTC (Citizen's Charter Service 4)
+Issues all 5 official certifications with Proof of Ownership / SPA checks, Municipal Treasurer OR gating, and printable QR-verified certificates.
+![Municipal Assessor Certifications and CTC](docs/screenshots/03-assessor-certifications.png)
+
+### 4. Provincial Capitol (Pili) — Dual-Pane Inspection & Statutory Checklist
+Synchronized survey/deed viewer with zoom controls, 4-item statutory compliance checklist, and forwarding hold when blockers are unresolved.
+![Provincial Capitol Dual-Pane Inspection](docs/screenshots/04-capitol-inspection.png)
+
+### 5. Municipal Treasury — Dashboard & Real-Time Pasacao Assessment Roll
+Reconciled Q1 billing window, Zeigarnik collection progress indicator, persistent search label with fuzzy error recovery, and semantic HTML5 ledger.
+![Municipal Treasury Dashboard](docs/screenshots/05-treasury-dashboard.png)
+
+### 6. Standalone Public Citizen Portal (`/citizen`)
+Accessible directly without login; provides live 5-stage inter-office docket tracking (RA 10173 privacy-masked) and the complete Citizen's Charter Requirements Pre-Screening Checklist.
+![Standalone Public Citizen Portal](docs/screenshots/06-citizen-portal.png)
+
+---
+
 ## 2. Human-Centered Design (ISO 9241-210) & Target Personas
 
 The interface was iteratively designed around empirical user personas and real municipal office constraints (desktop terminals on municipal LANs, high counter noise, 8:00 AM–5:00 PM government hours, and inclusive PWD access under RA 7277):

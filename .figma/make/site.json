@@ -1,4 +1,6 @@
 {
+  "title": "RPAT-IOSS",
+  "language": "en",
   "description": "Streamlines real property assessment and inter-office coordination for Philippine LGUs, enabling efficient appraisal, approval, billing, and public tracking.",
   "robots": {
     "index": false
