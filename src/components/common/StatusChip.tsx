@@ -25,11 +25,22 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'sm' }) =
   let Icon = FileEdit;
 
   if (
+    normalized.includes('unpaid') ||
+    normalized.includes('flag') ||
+    normalized.includes('deficien') ||
+    normalized.includes('returned') ||
+    normalized.includes('error')
+  ) {
+    styles = 'bg-red-50 text-red-950 border-red-600';
+    Icon = AlertTriangle;
+  } else if (
     normalized.includes('paid') ||
     normalized.includes('approved') ||
     normalized.includes('synced') ||
     normalized.includes('settled') ||
-    normalized.includes('verified')
+    normalized.includes('verified') ||
+    normalized.includes('released') ||
+    normalized.includes('annotated')
   ) {
     styles = 'bg-emerald-50 text-emerald-950 border-emerald-600';
     Icon = CheckCircle2;
@@ -38,19 +49,11 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'sm' }) =
     normalized.includes('capitol') ||
     normalized.includes('pending') ||
     normalized.includes('signature') ||
-    normalized.includes('partial')
+    normalized.includes('partial') ||
+    normalized.includes('scheduled')
   ) {
     styles = 'bg-amber-50 text-amber-950 border-amber-600';
     Icon = Clock;
-  } else if (
-    normalized.includes('flag') ||
-    normalized.includes('deficien') ||
-    normalized.includes('unpaid') ||
-    normalized.includes('returned') ||
-    normalized.includes('error')
-  ) {
-    styles = 'bg-red-50 text-red-950 border-red-600';
-    Icon = AlertTriangle;
   } else if (normalized.includes('cis')) {
     styles = 'bg-blue-50 text-blue-950 border-blue-600';
     Icon = ShieldCheck;
