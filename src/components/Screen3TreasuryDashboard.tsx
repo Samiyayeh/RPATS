@@ -141,50 +141,52 @@ export const Screen3TreasuryDashboard: React.FC<TreasuryDashboardProps> = ({ onS
         )}
       </div>
 
-      {/* Full-Width Semantic Pasacao Assessment Roll Table (No Clipping — Findings [3, 4], WCAG P-01 & P-02) */}
+      {/* Full-Width Semantic Pasacao Assessment Roll Table (Fits 1440px cleanly with zero clipping) */}
       <div className="bg-white rounded-xl border border-slate-300 shadow-2xs overflow-x-auto">
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 uppercase tracking-wider">
-              <th scope="col" className="py-3 px-4 whitespace-nowrap">TD No.</th>
-              <th scope="col" className="py-3 px-4 whitespace-nowrap">PIN</th>
-              <th scope="col" className="py-3 px-4 whitespace-nowrap">Owner (RA 10173 Masked)</th>
-              <th scope="col" className="py-3 px-4 whitespace-nowrap">Barangay</th>
-              <th scope="col" className="py-3 px-4 whitespace-nowrap">Class</th>
-              <th scope="col" className="py-3 px-4 text-right whitespace-nowrap">Assessed Value</th>
-              <th scope="col" className="py-3 px-4 text-right whitespace-nowrap">Annual Tax (2%)</th>
-              <th scope="col" className="py-3 px-4 text-center whitespace-nowrap">Roll Source</th>
-              <th scope="col" className="py-3 px-4 text-center whitespace-nowrap">Status</th>
-              <th scope="col" className="py-3 px-4 text-right whitespace-nowrap">Action</th>
+              <th scope="col" className="py-3 px-3 whitespace-nowrap">TD No. / PIN</th>
+              <th scope="col" className="py-3 px-3 whitespace-nowrap">Owner &amp; Barangay</th>
+              <th scope="col" className="py-3 px-3 whitespace-nowrap">Class</th>
+              <th scope="col" className="py-3 px-3 text-right whitespace-nowrap">Assessed Val.</th>
+              <th scope="col" className="py-3 px-3 text-right whitespace-nowrap">Annual Tax (2%)</th>
+              <th scope="col" className="py-3 px-3 text-center whitespace-nowrap">Roll Source</th>
+              <th scope="col" className="py-3 px-3 text-center whitespace-nowrap">Status</th>
+              <th scope="col" className="py-3 px-3 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {filteredRows.map((row) => (
               <tr key={row.tdNo} className="hover:bg-slate-50 transition-colors">
-                <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{row.tdNo}</td>
-                <td className="py-3.5 px-4 font-mono text-slate-700 whitespace-nowrap">{row.pin}</td>
-                <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">{row.ownerMasked}</td>
-                <td className="py-3.5 px-4 text-slate-800 whitespace-nowrap">{row.barangay}</td>
-                <td className="py-3.5 px-4 text-slate-800 whitespace-nowrap">{row.classification}</td>
-                <td className="py-3.5 px-4 text-right font-mono text-slate-900 whitespace-nowrap">
+                <td className="py-3 px-3 whitespace-nowrap">
+                  <div className="font-mono font-bold text-slate-900">{row.tdNo}</div>
+                  <div className="font-mono text-[11px] text-slate-600">{row.pin}</div>
+                </td>
+                <td className="py-3 px-3 whitespace-nowrap">
+                  <div className="font-bold text-slate-900">{row.ownerMasked}</div>
+                  <div className="text-[11px] text-slate-600">Brgy. {row.barangay}</div>
+                </td>
+                <td className="py-3 px-3 text-slate-800 whitespace-nowrap">{row.classification}</td>
+                <td className="py-3 px-3 text-right font-mono text-slate-900 whitespace-nowrap">
                   ₱{row.assessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </td>
-                <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                   ₱{row.totalTaxDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </td>
-                <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span className="bg-slate-100 border border-slate-300 text-slate-800 font-semibold px-2.5 py-0.5 rounded">
+                <td className="py-3 px-3 text-center whitespace-nowrap">
+                  <span className="bg-slate-100 border border-slate-300 text-slate-800 font-semibold px-2 py-0.5 rounded">
                     {row.source}
                   </span>
                 </td>
-                <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                <td className="py-3 px-3 text-center whitespace-nowrap">
                   <StatusChip status={row.paymentStatus} />
                 </td>
-                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                <td className="py-3 px-3 text-right whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => onSelectRow && onSelectRow(row.tdNo)}
-                    className="min-h-[36px] px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-xs"
+                    className="min-h-[36px] px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-xs"
                   >
                     {row.paymentStatus === 'Paid' ? 'View Bill' : 'Bill & Collect'}
                   </button>
