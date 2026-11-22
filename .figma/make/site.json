@@ -1,0 +1,10 @@
+{
+  "description": "Streamlines real property assessment and inter-office coordination for Philippine LGUs, enabling efficient appraisal, approval, billing, and public tracking.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
