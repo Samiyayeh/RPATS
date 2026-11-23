@@ -15,18 +15,22 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
   onPaymentSettled
 }) => {
   const { currentUser, recordTreasuryPayment } = useRpatis();
-  const [payorName, setPayorName] = useState(row.ownerFull);
+  const [payorName, setPayorName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'LandBank' | 'Check'>('Cash');
-  const [tenderedAmount, setTenderedAmount] = useState(Math.ceil(netDue / 100) * 100);
+  const [tenderedAmount, setTenderedAmount] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const changeDue = tenderedAmount - netDue;
-  const isInsufficient = tenderedAmount < netDue;
+  const hasTender = tenderedAmount.trim().length > 0;
+  const tenderedNum = hasTender ? Number(tenderedAmount) : 0;
+  const changeDue = tenderedNum - netDue;
+  const isInsufficient = hasTender && tenderedNum < netDue;
+  const canConfirmStep1 = payorName.trim().length > 0 && hasTender && tenderedNum >= netDue;
   const candidateOrNo = `OR-2026-${String(993841 + Math.floor(row.assessedValue % 90))}`;
   const candidateClearance = `TC-PAS-2026-0419`;
 
   const handleFinalConfirm = () => {
-    recordTreasuryPayment(row.tdNo, payorName, netDue, candidateOrNo, candidateClearance);
+    if (!canConfirmStep1) return;
+    recordTreasuryPayment(row.tdNo, payorName.trim(), netDue, candidateOrNo, candidateClearance);
     setShowConfirmModal(false);
     onPaymentSettled && onPaymentSettled(candidateOrNo, candidateClearance);
   };
@@ -56,6 +60,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               <input
                 id="cashier-payor"
                 type="text"
+                placeholder="Enter payor full name..."
                 value={payorName}
                 onChange={(e) => setPayorName(e.target.value)}
                 className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-bold text-slate-900"
@@ -112,8 +117,9 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
                   id="tender-amount"
                   type="number"
                   min={0}
+                  placeholder="Enter amount tendered..."
                   value={tenderedAmount}
-                  onChange={(e) => setTenderedAmount(Number(e.target.value))}
+                  onChange={(e) => setTenderedAmount(e.target.value)}
                   className="w-full min-h-[44px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-lg font-mono font-bold text-slate-900"
                 />
               </div>
@@ -127,10 +133,10 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               }`}
             >
               <span className="text-xs font-sans font-bold uppercase">
-                {isInsufficient ? 'Insufficient Tender:' : 'Change Due:'}
+                {!hasTender ? 'Change Due:' : isInsufficient ? 'Insufficient Tender:' : 'Change Due:'}
               </span>
               <strong className="text-xl font-extrabold">
-                ₱{changeDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                {hasTender ? `₱${changeDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'}
               </strong>
             </div>
           </div>
@@ -138,7 +144,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
           {/* Step 1 Button (Opens 2-Step Confirmation Modal — Finding [6] & WCAG U-03) */}
           <button
             type="button"
-            disabled={isInsufficient}
+            disabled={!canConfirmStep1}
             onClick={() => setShowConfirmModal(true)}
             className="w-full min-h-[48px] bg-emerald-800 hover:bg-emerald-900 disabled:bg-slate-300 disabled:text-slate-600 text-white text-sm font-bold rounded-lg px-5 py-3 flex items-center justify-center gap-2 shadow-sm"
           >
@@ -179,7 +185,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
             <div className="space-y-1.5 relative z-10 text-slate-900">
               <div>Candidate OR Serial: <strong>{candidateOrNo}</strong></div>
               <div>Date: March 18, 2026</div>
-              <div>Payor: <strong className="font-sans">{payorName}</strong></div>
+              <div>Payor: <strong className="font-sans">{payorName || 'Pending Entry'}</strong></div>
               <div>TD No.: <strong>{row.tdNo}</strong> (PIN {row.pin})</div>
               <div>
                 Net Amount: <strong>₱{netDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>
@@ -241,7 +247,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               <div className="flex justify-between">
                 <span className="text-slate-600">Tendered / Change:</span>
                 <strong className="font-mono text-emerald-800">
-                  ₱{tenderedAmount.toFixed(2)} / ₱{changeDue.toFixed(2)}
+                  ₱{tenderedNum.toFixed(2)} / ₱{changeDue.toFixed(2)}
                 </strong>
               </div>
             </div>

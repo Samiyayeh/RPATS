@@ -106,22 +106,23 @@ const CHARTER_CHECKLISTS: Record<
 export const Screen4CitizenPortal: React.FC = () => {
   const { dockets } = useRpatis();
   const [activeTab, setActiveTab] = useState<'tracker' | 'checklist'>('tracker');
-  const [trackingInput, setTrackingInput] = useState('PAS-2026-0849');
-  const [searchedCode, setSearchedCode] = useState('PAS-2026-0849');
+  const [trackingInput, setTrackingInput] = useState('');
+  const [searchedCode, setSearchedCode] = useState('');
 
   const [checklistKey, setChecklistKey] = useState<ServiceChecklistKey>('transfer_standard');
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
 
-  const matchedDocket =
-    dockets.find(
-      (d) =>
-        d.id.toLowerCase() === searchedCode.trim().toLowerCase() ||
-        d.tdNo.toLowerCase() === searchedCode.trim().toLowerCase() ||
-        d.pin.toLowerCase() === searchedCode.trim().toLowerCase()
-    ) || dockets[0];
+  const matchedDocket = searchedCode.trim()
+    ? dockets.find(
+        (d) =>
+          d.id.toLowerCase() === searchedCode.trim().toLowerCase() ||
+          d.tdNo.toLowerCase() === searchedCode.trim().toLowerCase() ||
+          d.pin.toLowerCase() === searchedCode.trim().toLowerCase()
+      )
+    : undefined;
 
-  const currentStage =
-    matchedDocket.status === 'Paid'
+  const currentStage = matchedDocket
+    ? matchedDocket.status === 'Paid'
       ? 5
       : matchedDocket.status === 'Approved'
       ? 4
@@ -129,7 +130,8 @@ export const Screen4CitizenPortal: React.FC = () => {
         matchedDocket.status === 'At Capitol' ||
         matchedDocket.status === 'Flagged'
       ? 3
-      : 2;
+      : 2
+    : 0;
 
   const activeChecklist = CHARTER_CHECKLISTS[checklistKey];
   const checkedCount = activeChecklist.items.filter((item) => checkedItems.includes(item)).length;
@@ -217,6 +219,25 @@ export const Screen4CitizenPortal: React.FC = () => {
               </div>
             </form>
 
+            {!searchedCode && (
+              <div className="bg-white rounded-2xl border border-slate-300 shadow-2xs p-8 text-center text-sm text-slate-600">
+                Enter your Tracking Code, Tax Declaration No., or Property Index Number above to view real-time assessment milestones.
+              </div>
+            )}
+
+            {searchedCode && !matchedDocket && (
+              <div
+                role="alert"
+                className="bg-red-50 rounded-2xl border-2 border-red-500 p-6 text-sm text-red-950 font-semibold flex items-center gap-3"
+              >
+                <AlertTriangle className="w-5 h-5 text-red-700 shrink-0" aria-hidden="true" />
+                <span>
+                  No assessment docket found matching <strong className="font-mono">{searchedCode}</strong>. Please verify your Tracking Code or PIN with the Pasacao Assessor front desk.
+                </span>
+              </div>
+            )}
+
+            {matchedDocket && (
             <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-6 space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
                 <div className="space-y-1">
@@ -330,6 +351,7 @@ export const Screen4CitizenPortal: React.FC = () => {
                 })}
               </div>
             </div>
+            )}
           </div>
         )}
 

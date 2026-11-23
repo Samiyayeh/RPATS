@@ -52,12 +52,13 @@ const SMV_ROWS: Array<{
 export const ViewSmvMatrix: React.FC<ViewSmvMatrixProps> = ({ onApplyRate }) => {
   const { dockets, activeDocketId, pushToast } = useRpatis();
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [testArea, setTestArea] = useState(450);
+  const [testArea, setTestArea] = useState('');
 
   const selectedRow = SMV_ROWS[selectedIndex];
   const activeDocket = dockets.find((d) => d.id === activeDocketId) || dockets[0];
 
-  const proposedMarket = testArea * selectedRow.rate;
+  const areaNum = Number(testArea) || 0;
+  const proposedMarket = areaNum * selectedRow.rate;
   const proposedAssessed = (proposedMarket * selectedRow.level) / 100;
 
   return (
@@ -139,8 +140,9 @@ export const ViewSmvMatrix: React.FC<ViewSmvMatrixProps> = ({ onApplyRate }) => 
               id="smv-test-area"
               type="number"
               min={1}
+              placeholder="Enter area in sqm"
               value={testArea}
-              onChange={(e) => setTestArea(Math.max(1, Number(e.target.value)))}
+              onChange={(e) => setTestArea(e.target.value)}
               className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-900"
             />
           </div>

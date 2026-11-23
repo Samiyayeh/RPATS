@@ -7,7 +7,7 @@ export const ViewEndorsementQueue: React.FC = () => {
   const { dockets, endorseDocketsToCapitol } = useRpatis();
   const [activeTab, setActiveTab] = useState<'All' | 'Needs Signature' | 'Under Technical Review' | 'Flagged' | 'Approved'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>(['PAS-2026-0850', 'PAS-2026-0851']);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastTransmittedCount, setLastTransmittedCount] = useState(0);
 

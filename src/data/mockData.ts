@@ -11,7 +11,7 @@ export const USER_PERSONAS: Record<string, UserPersona> = {
     employeeId: 'PAS-ASSR-0824',
     email: 'l.banares@pasacao.gov.ph',
     avatarInitials: 'LB',
-    permissions: ['FAAS Encoding', '1949 Archive Lookup', 'SMV Matrix', 'Draft Endorsement'],
+    permissions: ['FAAS Encoding', 'Historical Cadastre Vault', 'SMV Matrix', 'Draft Endorsement'],
     description: 'Encodes property conveyances, computes FMV/AV under RA 7160, and prepares Tax Declarations.'
   },
   assessor_chief: {

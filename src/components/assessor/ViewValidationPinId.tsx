@@ -22,19 +22,21 @@ export const ViewValidationPinId: React.FC = () => {
 
   // Service 2: PIN / ARP Assignment
   const [barangayCode, setBarangayCode] = useState('01');
-  const [sectionCode, setSectionCode] = useState('004');
-  const [parcelCode, setParcelCode] = useState('099');
-  const proposedPin = `041-${barangayCode}-${parcelCode}`;
-  const proposedArp = `ARP-PAS-2026-${sectionCode}${parcelCode}`;
+  const [sectionCode, setSectionCode] = useState('');
+  const [parcelCode, setParcelCode] = useState('');
+  const hasPinInputs = sectionCode.trim().length > 0 && parcelCode.trim().length > 0;
+  const proposedPin = hasPinInputs ? `041-${barangayCode}-${parcelCode.trim()}` : '';
+  const proposedArp = hasPinInputs ? `ARP-PAS-2026-${sectionCode.trim()}${parcelCode.trim()}` : '';
   const pinCollision =
-    assessmentRoll.some((r) => r.pin === proposedPin) || dockets.some((d) => d.pin === proposedPin);
+    hasPinInputs &&
+    (assessmentRoll.some((r) => r.pin === proposedPin) || dockets.some((d) => d.pin === proposedPin));
 
   // Service 3: Property Identification & Ocular Inspection
   const [ocRequestor, setOcRequestor] = useState('');
   const [ocLotDesc, setOcLotDesc] = useState('');
   const [ocBarangay, setOcBarangay] = useState('Balogo');
   const [ocDocRef, setOcDocRef] = useState('');
-  const [ocDate, setOcDate] = useState('2026-03-19');
+  const [ocDate, setOcDate] = useState('');
 
   const handleValidateTd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +60,7 @@ export const ViewValidationPinId: React.FC = () => {
 
   const handleScheduleOcular = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ocRequestor.trim() || !ocLotDesc.trim() || !ocDocRef.trim()) return;
+    if (!ocRequestor.trim() || !ocLotDesc.trim() || !ocDocRef.trim() || !ocDate) return;
     scheduleOcularInspection({
       requestorName: ocRequestor.trim(),
       lotDescription: ocLotDesc.trim(),
@@ -70,6 +72,7 @@ export const ViewValidationPinId: React.FC = () => {
     setOcRequestor('');
     setOcLotDesc('');
     setOcDocRef('');
+    setOcDate('');
   };
 
   return (
@@ -188,7 +191,7 @@ export const ViewValidationPinId: React.FC = () => {
                 <div className="font-bold flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-700" aria-hidden="true" />
                   <span>
-                    No active record found for &ldquo;{validatedResult.tdNo}&rdquo;. Check 1949 Historical Vault or verify TD number.
+                    No active record found for &ldquo;{validatedResult.tdNo}&rdquo;. Check Historical Cadastre Vault or verify TD number.
                   </span>
                 </div>
               )}
@@ -234,6 +237,7 @@ export const ViewValidationPinId: React.FC = () => {
                 id="pin-sec"
                 type="text"
                 maxLength={4}
+                placeholder="e.g. 004"
                 value={sectionCode}
                 onChange={(e) => setSectionCode(e.target.value)}
                 className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
@@ -248,6 +252,7 @@ export const ViewValidationPinId: React.FC = () => {
                 id="pin-parcel"
                 type="text"
                 maxLength={4}
+                placeholder="e.g. 099"
                 value={parcelCode}
                 onChange={(e) => setParcelCode(e.target.value)}
                 className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
@@ -257,14 +262,22 @@ export const ViewValidationPinId: React.FC = () => {
 
           <div
             className={`p-4 rounded-xl border-2 flex flex-wrap items-center justify-between gap-4 ${
-              pinCollision ? 'bg-red-50 border-red-600 text-red-950' : 'bg-emerald-50 border-emerald-600 text-emerald-950'
+              !hasPinInputs
+                ? 'bg-slate-50 border-slate-300 text-slate-800'
+                : pinCollision
+                ? 'bg-red-50 border-red-600 text-red-950'
+                : 'bg-emerald-50 border-emerald-600 text-emerald-950'
             }`}
           >
             <div className="space-y-1 text-xs">
               <div className="font-mono font-bold text-base">
-                PIN: {proposedPin} • ARP: {proposedArp}
+                {hasPinInputs ? `PIN: ${proposedPin} • ARP: ${proposedArp}` : 'Enter Section Code & Parcel Sequence'}
               </div>
-              {pinCollision ? (
+              {!hasPinInputs ? (
+                <div className="text-slate-600">
+                  Duplicate collision check runs automatically once codes are entered.
+                </div>
+              ) : pinCollision ? (
                 <div className="font-bold flex items-center gap-1.5 text-red-900">
                   <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>DUPLICATE COLLISION DETECTED — PIN {proposedPin} is already assigned to an existing parcel!</span>
@@ -279,14 +292,16 @@ export const ViewValidationPinId: React.FC = () => {
 
             <button
               type="button"
-              disabled={pinCollision}
-              onClick={() =>
+              disabled={!hasPinInputs || pinCollision}
+              onClick={() => {
                 pushToast(
                   'PIN & ARP Assigned',
                   `Reserved unique PIN ${proposedPin} and ${proposedArp} in Pasacao Cadastre Index.`,
                   'success'
-                )
-              }
+                );
+                setSectionCode('');
+                setParcelCode('');
+              }}
               className="min-h-[42px] px-4 py-2 bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-600 text-white rounded-lg text-xs font-bold"
             >
               Reserve &amp; Assign PIN/ARP
@@ -313,6 +328,7 @@ export const ViewValidationPinId: React.FC = () => {
               <input
                 id="oc-req"
                 type="text"
+                placeholder="Enter claimant full name..."
                 value={ocRequestor}
                 onChange={(e) => setOcRequestor(e.target.value)}
                 className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"

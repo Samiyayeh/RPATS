@@ -4,6 +4,7 @@ import {
   AssessmentProblemTicket,
   AssessmentRollRow,
   CertificationRequest,
+  LegacyArchiveRecord,
   LienAnnotationRecord,
   OcularInspectionRequest,
   OfficeRole,
@@ -48,6 +49,7 @@ interface RpatisContextType {
   lienAnnotations: LienAnnotationRecord[];
   ocularRequests: OcularInspectionRequest[];
   problemTickets: AssessmentProblemTicket[];
+  legacyRecords: LegacyArchiveRecord[];
   issueCertification: (cert: Omit<CertificationRequest, 'id' | 'issuedAt' | 'status'>) => CertificationRequest;
   recordLienAnnotation: (lien: Omit<LienAnnotationRecord, 'id' | 'recordedAt' | 'status'>) => void;
   scheduleOcularInspection: (req: Omit<OcularInspectionRequest, 'id' | 'status'>) => void;
@@ -55,6 +57,8 @@ interface RpatisContextType {
   logAssessmentProblem: (ticket: Omit<AssessmentProblemTicket, 'id' | 'loggedAt' | 'status'>) => void;
   resolveAssessmentProblem: (id: string, resolutionNotes: string) => void;
   resubmitFlaggedDocket: (docketId: string, correctiveNote: string) => void;
+  addLegacyRecord: (rec: Omit<LegacyArchiveRecord, 'id'>) => LegacyArchiveRecord;
+  migrateLegacyToModern: (legacyId: string, docket: AssessmentDocket) => void;
 
   // Accessible Live Notifications (WCAG R-02 aria-live="polite")
   toasts: SyncToast[];
@@ -125,6 +129,33 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       description: 'Requested clarification on R-1 vs R-2 unit value classification for Odicon interior lot.',
       loggedAt: 'March 18, 2026 • 10:05 AM',
       status: 'Open'
+    }
+  ]);
+
+  const [legacyRecords, setLegacyRecords] = useState<LegacyArchiveRecord[]>([
+    {
+      id: 'LEG-1949-0412',
+      vintageTd: '1949-0412',
+      revision: '1949 Foundation',
+      owner: 'Don Mariano Dela Cruz (Deceased 1968)',
+      lot: 'Cadastral Lot 4102 (Original Madre Lot), Pasacao',
+      area: '1,800.00 sqm (Subdivided into 4 lots in 1972)',
+      location: 'Vault Room B, Shelf 4, Binder 1949-A',
+      transcription:
+        'Lote original dividido en cuatro partes segun Escritura de Particion de Fecha 12 de Junio de 1972.',
+      modernDraftTarget: 'PAS-2026-0849 • Juan M. Dela Cruz (Lot 4102-B, 450 sqm)'
+    },
+    {
+      id: 'LEG-1967-1189',
+      vintageTd: '1967-1189',
+      revision: '1967 General Revision',
+      owner: 'Fausto M. Asido',
+      lot: 'Cadastral Lot 3891, Brgy. Caranan, Pasacao',
+      area: '1,280.00 sqm',
+      location: 'Vault Room A, Shelf 2, Binder 1967-08',
+      transcription:
+        'Original coastal agricultural lot reclassified along Caranan municipal highway.',
+      modernDraftTarget: 'PAS-2026-0850 • Caranan Fishing Corp. (Lot 3891-C, 320 sqm)'
     }
   ]);
 
@@ -460,6 +491,69 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  const addLegacyRecord = (rec: Omit<LegacyArchiveRecord, 'id'>): LegacyArchiveRecord => {
+    const created: LegacyArchiveRecord = {
+      ...rec,
+      id: `LEG-${Date.now()}`
+    };
+    setLegacyRecords((prev) => [created, ...prev]);
+    pushToast(
+      'Paper Ledger Digitized',
+      `Vintage TD #${created.vintageTd} (${created.owner}) ingested into Historical Cadastre Vault.`,
+      'success'
+    );
+    return created;
+  };
+
+  const migrateLegacyToModern = (legacyId: string, docket: AssessmentDocket) => {
+    setDockets((prev) => {
+      const exists = prev.some((d) => d.id === docket.id);
+      return exists ? prev.map((d) => (d.id === docket.id ? docket : d)) : [docket, ...prev];
+    });
+    setActiveDocketId(docket.id);
+
+    const basicRpt = Math.round(docket.assessedValue * 0.01);
+    const sef = Math.round(docket.assessedValue * 0.01);
+    const rollRow: AssessmentRollRow = {
+      tdNo: docket.tdNo,
+      pin: docket.pin,
+      ownerMasked: docket.ownerMasked,
+      ownerFull: docket.owner,
+      barangay: docket.barangay.replace(/^Brgy\.\s*/i, '').replace(/,\s*Pasacao$/i, ''),
+      classification: docket.classification,
+      areaSqm: docket.areaSqm,
+      unitValue: docket.unitValue,
+      marketValue: docket.marketValue,
+      assessmentLevel: docket.assessmentLevel / 100,
+      assessedValue: docket.assessedValue,
+      basicRpt,
+      sef,
+      totalTaxDue: basicRpt + sef,
+      paymentStatus: 'Unpaid',
+      orNo: '',
+      source: 'Assessor Roll',
+      syncTime: 'Migrated just now'
+    };
+
+    setAssessmentRoll((prev) => {
+      const exists = prev.some((r) => r.tdNo === rollRow.tdNo || r.pin === rollRow.pin);
+      return exists
+        ? prev.map((r) => (r.tdNo === rollRow.tdNo || r.pin === rollRow.pin ? rollRow : r))
+        : [rollRow, ...prev];
+    });
+
+    const summary = `${docket.id} (${docket.tdNo}) • ${docket.owner} (${docket.lotNo}, ${docket.areaSqm.toLocaleString()} sqm)`;
+    setLegacyRecords((prev) =>
+      prev.map((l) => (l.id === legacyId ? { ...l, modernDraftTarget: summary } : l))
+    );
+
+    pushToast(
+      'Historical Record Transferred to Modern System',
+      `Created ${docket.id} / ${docket.tdNo} in Assessment Roll & FAAS queue while preserving original ledger.`,
+      'success'
+    );
+  };
+
   return (
     <RpatisContext.Provider
       value={{
@@ -481,6 +575,7 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         lienAnnotations,
         ocularRequests,
         problemTickets,
+        legacyRecords,
         issueCertification,
         recordLienAnnotation,
         scheduleOcularInspection,
@@ -488,6 +583,8 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         logAssessmentProblem,
         resolveAssessmentProblem,
         resubmitFlaggedDocket,
+        addLegacyRecord,
+        migrateLegacyToModern,
         toasts,
         pushToast,
         dismissToast

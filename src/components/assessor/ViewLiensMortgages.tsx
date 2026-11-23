@@ -7,20 +7,21 @@ export const ViewLiensMortgages: React.FC = () => {
   const { assessmentRoll, lienAnnotations, recordLienAnnotation } = useRpatis();
 
   const [action, setAction] = useState<'Annotate Mortgage' | 'Cancel Mortgage'>('Annotate Mortgage');
-  const [selectedTd, setSelectedTd] = useState(assessmentRoll[0]?.tdNo || 'TD-26-0001');
-  const [mortgageeBank, setMortgageeBank] = useState('Land Bank of the Philippines');
+  const [selectedTd, setSelectedTd] = useState('');
+  const [mortgageeBank, setMortgageeBank] = useState('');
   const [noticeRefNo, setNoticeRefNo] = useState('');
   const [annotationOrNo, setAnnotationOrNo] = useState('');
 
-  const selectedRow = assessmentRoll.find((r) => r.tdNo === selectedTd) || assessmentRoll[0];
+  const selectedRow = assessmentRoll.find((r) => r.tdNo === selectedTd);
   const canSubmit =
+    Boolean(selectedRow) &&
     mortgageeBank.trim().length > 0 &&
     noticeRefNo.trim().length >= 3 &&
     annotationOrNo.trim().length >= 4;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedRow) return;
     recordLienAnnotation({
       action,
       tdNo: selectedRow.tdNo,
@@ -30,6 +31,8 @@ export const ViewLiensMortgages: React.FC = () => {
       noticeRefNo: noticeRefNo.trim().toUpperCase(),
       annotationOrNo: annotationOrNo.trim().toUpperCase()
     });
+    setSelectedTd('');
+    setMortgageeBank('');
     setNoticeRefNo('');
     setAnnotationOrNo('');
   };
@@ -86,6 +89,7 @@ export const ViewLiensMortgages: React.FC = () => {
               onChange={(e) => setSelectedTd(e.target.value)}
               className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900"
             >
+              <option value="">-- Select Collateral Property --</option>
               {assessmentRoll.map((r) => (
                 <option key={r.tdNo} value={r.tdNo}>
                   {r.tdNo} — {r.ownerFull} (PIN {r.pin})
@@ -101,6 +105,7 @@ export const ViewLiensMortgages: React.FC = () => {
             <input
               id="lien-bank"
               type="text"
+              placeholder="Enter bank or lending institution..."
               value={mortgageeBank}
               onChange={(e) => setMortgageeBank(e.target.value)}
               className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"

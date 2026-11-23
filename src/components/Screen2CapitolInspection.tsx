@@ -17,13 +17,11 @@ export const Screen2CapitolInspection: React.FC<Screen2InspectionProps> = ({
 
   const [activeDocTab, setActiveDocTab] = useState<'survey' | 'deed' | 'ecar' | 'faas'>('survey');
   const [zoomPercent, setZoomPercent] = useState(100);
-  const [smvCheck, setSmvCheck] = useState(true);
-  const [boundaryCheck, setBoundaryCheck] = useState(activeDocket.status !== 'Flagged');
-  const [taxClearanceCheck, setTaxClearanceCheck] = useState(true);
-  const [birEcarCheck, setBirEcarCheck] = useState(true);
-  const [noteText, setNoteText] = useState(
-    'Survey bearings and Provincial SMV rate verified against Ordinance 2024-08.'
-  );
+  const [smvCheck, setSmvCheck] = useState(false);
+  const [boundaryCheck, setBoundaryCheck] = useState(false);
+  const [taxClearanceCheck, setTaxClearanceCheck] = useState(false);
+  const [birEcarCheck, setBirEcarCheck] = useState(false);
+  const [noteText, setNoteText] = useState('');
 
   const hasUnresolvedBlocker =
     !smvCheck || !boundaryCheck || !taxClearanceCheck || !birEcarCheck || activeDocket.status === 'Flagged';
@@ -164,6 +162,35 @@ export const Screen2CapitolInspection: React.FC<Screen2InspectionProps> = ({
                     <strong>{activeDocket.owner}</strong> (PIN <span className="font-mono">{activeDocket.pin}</span>).
                     Assessed Value: <strong className="font-mono">₱{activeDocket.assessedValue.toLocaleString()}</strong>.
                   </p>
+                  {activeDocTab === 'faas' && (
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                        Declared Real Property Kinds (RA 7160)
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeDocket.areaSqm > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-300 font-semibold text-slate-800">
+                            Land ({activeDocket.classification} • {activeDocket.areaSqm.toLocaleString()} sqm)
+                          </span>
+                        )}
+                        {activeDocket.building && (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-300 font-semibold text-slate-800">
+                            Building ({activeDocket.building.structuralType} • {activeDocket.building.floorAreaSqm} sqm)
+                          </span>
+                        )}
+                        {activeDocket.otherStructure && (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-300 font-semibold text-slate-800">
+                            Other Structure ({activeDocket.otherStructure.structureType})
+                          </span>
+                        )}
+                        {activeDocket.machinery && (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-300 font-semibold text-slate-800">
+                            Machinery ({activeDocket.machinery.description || activeDocket.machinery.machineryClass})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -231,6 +258,7 @@ export const Screen2CapitolInspection: React.FC<Screen2InspectionProps> = ({
             <textarea
               id="examiner-notes"
               rows={3}
+              placeholder="Enter examiner audit findings or verification remarks..."
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               className="w-full bg-white border border-slate-400 rounded-lg p-2.5 text-xs text-slate-900"

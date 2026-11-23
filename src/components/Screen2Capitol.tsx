@@ -21,12 +21,8 @@ export const Screen2Capitol: React.FC = () => {
   );
 
   const [showDeficiencyModal, setShowDeficiencyModal] = useState(false);
-  const [selectedDiscrepancies, setSelectedDiscrepancies] = useState<string[]>([
-    'Cadastral Boundary overlap / missing surveyor signature'
-  ]);
-  const [discrepancyRemarks, setDiscrepancyRemarks] = useState(
-    'Cadastral survey tie-line bearing deviates by 1.2m on the eastern boundary. Please submit an amended CIS sketch.'
-  );
+  const [selectedDiscrepancies, setSelectedDiscrepancies] = useState<string[]>([]);
+  const [discrepancyRemarks, setDiscrepancyRemarks] = useState('');
 
   const activeDocket = dockets.find((d) => d.id === activeDocketId) || dockets[0];
   const flaggedCount = dockets.filter((d) => d.status === 'Flagged').length;
@@ -40,9 +36,15 @@ export const Screen2Capitol: React.FC = () => {
     );
   };
 
+  const canDispatchDeficiency =
+    selectedDiscrepancies.length > 0 || discrepancyRemarks.trim().length > 0;
+
   const handleDispatchDeficiency = () => {
-    const combined = `${selectedDiscrepancies.join('; ')} — ${discrepancyRemarks}`;
-    flagDocketDeficiency(activeDocket.id, combined);
+    if (!canDispatchDeficiency) return;
+    const parts = [selectedDiscrepancies.join('; '), discrepancyRemarks.trim()].filter(Boolean);
+    flagDocketDeficiency(activeDocket.id, parts.join(' — '));
+    setSelectedDiscrepancies([]);
+    setDiscrepancyRemarks('');
     setShowDeficiencyModal(false);
     setActiveMenu('deficiencies');
   };
@@ -235,6 +237,7 @@ export const Screen2Capitol: React.FC = () => {
               <textarea
                 id="def-remarks"
                 rows={3}
+                placeholder="Describe the boundary, SMV, or documentary deficiency to return to Pasacao..."
                 value={discrepancyRemarks}
                 onChange={(e) => setDiscrepancyRemarks(e.target.value)}
                 className="w-full border border-slate-400 rounded-lg p-2.5 text-xs text-slate-900"
@@ -251,8 +254,9 @@ export const Screen2Capitol: React.FC = () => {
               </button>
               <button
                 type="button"
+                disabled={!canDispatchDeficiency}
                 onClick={handleDispatchDeficiency}
-                className="min-h-[42px] px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold flex items-center gap-2"
+                className="min-h-[42px] px-4 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 disabled:text-slate-600 text-white rounded-lg text-xs font-bold flex items-center gap-2"
               >
                 <Send className="w-4 h-4" aria-hidden="true" />
                 <span>Return Docket to LGU Pasacao</span>

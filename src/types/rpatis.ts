@@ -24,6 +24,8 @@ export interface UserPersona {
 
 export type PropertyClassification = 'Residential' | 'Agricultural' | 'Commercial';
 
+export type MachineryClassification = 'Agricultural' | 'Residential' | 'Commercial / Industrial';
+
 export type DocketStatus =
   | 'Draft'
   | 'Needs Signature'
@@ -39,6 +41,26 @@ export interface BuildingSubComponent {
   yearBuilt: number;
   depreciationPercent: number;
   unitCostPerSqm: number;
+}
+
+export interface PermanentStructureComponent {
+  structureType: string;
+  description: string;
+  areaOrUnits: number;
+  yearBuilt: number;
+  replacementCost: number;
+  depreciationPercent: number;
+  assessmentLevel: number;
+}
+
+export interface MachineryComponent {
+  description: string;
+  brandModel: string;
+  machineryClass: MachineryClassification;
+  acquisitionCost: number;
+  yearAcquired: number;
+  depreciationPercent: number;
+  assessmentLevel: number;
 }
 
 export interface DeficiencyNote {
@@ -70,6 +92,8 @@ export interface AssessmentDocket {
   marketValue: number;
   assessedValue: number;
   building?: BuildingSubComponent;
+  otherStructure?: PermanentStructureComponent;
+  machinery?: MachineryComponent;
   status: DocketStatus;
   submittedAt: string;
   transmittedAt?: string;
@@ -167,5 +191,17 @@ export interface AssessmentProblemTicket {
   resolutionNotes?: string;
   loggedAt: string;
   status: 'Open' | 'Resolved';
+}
+
+export interface LegacyArchiveRecord {
+  id: string;
+  vintageTd: string;
+  revision: string;
+  owner: string;
+  lot: string;
+  area: string;
+  location: string;
+  transcription: string;
+  modernDraftTarget?: string;
 }
 

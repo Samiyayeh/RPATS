@@ -211,7 +211,7 @@ export const LoginGateway: React.FC = () => {
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" aria-hidden="true" />
                   <span>
-                    <strong>Municipal Assessor&apos;s Office (Pasacao)</strong> — FAAS encoding, 1949 archive verification, and SMV valuation.
+                    <strong>Municipal Assessor&apos;s Office (Pasacao)</strong> — FAAS encoding, historical cadastre archive verification, and SMV valuation.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">

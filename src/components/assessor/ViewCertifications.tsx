@@ -17,23 +17,25 @@ export const ViewCertifications: React.FC = () => {
   const { assessmentRoll, certifications, issueCertification } = useRpatis();
 
   const [certType, setCertType] = useState<CertificationType>(CERT_TYPES[0]);
-  const [selectedTd, setSelectedTd] = useState<string>(assessmentRoll[0]?.tdNo || 'TD-26-0001');
-  const [requestorName, setRequestorName] = useState('Juan M. Dela Cruz');
-  const [purpose, setPurpose] = useState('Conveyance / Title Registration');
+  const [selectedTd, setSelectedTd] = useState<string>('');
+  const [requestorName, setRequestorName] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [proofChecked, setProofChecked] = useState(false);
   const [spaChecked, setSpaChecked] = useState(false);
   const [treasuryOrNo, setTreasuryOrNo] = useState('');
-  const [feeAmount, setFeeAmount] = useState(150);
+  const [feeAmount, setFeeAmount] = useState('');
   const [previewCert, setPreviewCert] = useState<CertificationRequest | null>(
     certifications[0] || null
   );
 
   const selectedRow = assessmentRoll.find((r) => r.tdNo === selectedTd);
   const isNoProperty = certType === 'Certificate of No Property';
+  const feeNum = Number(feeAmount) || 0;
   const canIssue =
     requestorName.trim().length > 0 &&
     treasuryOrNo.trim().length >= 4 &&
-    (isNoProperty || proofChecked);
+    feeNum > 0 &&
+    (isNoProperty || (selectedTd !== '' && proofChecked));
 
   const handleIssue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +49,14 @@ export const ViewCertifications: React.FC = () => {
       proofOfOwnershipVerified: proofChecked,
       spaVerified: spaChecked,
       treasuryOrNo: treasuryOrNo.trim().toUpperCase(),
-      feeAmount
+      feeAmount: feeNum
     });
     setPreviewCert(issued);
+    setSelectedTd('');
+    setRequestorName('');
+    setPurpose('');
     setTreasuryOrNo('');
+    setFeeAmount('');
     setProofChecked(false);
     setSpaChecked(false);
   };
@@ -107,13 +113,10 @@ export const ViewCertifications: React.FC = () => {
               <select
                 id="cert-td"
                 value={selectedTd}
-                onChange={(e) => {
-                  setSelectedTd(e.target.value);
-                  const found = assessmentRoll.find((r) => r.tdNo === e.target.value);
-                  if (found) setRequestorName(found.ownerFull);
-                }}
+                onChange={(e) => setSelectedTd(e.target.value)}
                 className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900"
               >
+                <option value="">-- Select Property Record --</option>
                 {assessmentRoll.map((r) => (
                   <option key={r.tdNo} value={r.tdNo}>
                     {r.tdNo} — {r.ownerFull} (Brgy. {r.barangay})
@@ -131,6 +134,7 @@ export const ViewCertifications: React.FC = () => {
               <input
                 id="cert-requestor"
                 type="text"
+                placeholder="Enter requestor full name..."
                 value={requestorName}
                 onChange={(e) => setRequestorName(e.target.value)}
                 className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
@@ -144,6 +148,7 @@ export const ViewCertifications: React.FC = () => {
               <input
                 id="cert-purpose"
                 type="text"
+                placeholder="e.g. Conveyance / Bank Requirement"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
@@ -210,9 +215,10 @@ export const ViewCertifications: React.FC = () => {
               <input
                 id="cert-fee"
                 type="number"
-                min={50}
+                min={1}
+                placeholder="e.g. 150"
                 value={feeAmount}
-                onChange={(e) => setFeeAmount(Number(e.target.value))}
+                onChange={(e) => setFeeAmount(e.target.value)}
                 className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
               />
             </div>

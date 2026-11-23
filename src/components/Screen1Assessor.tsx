@@ -14,10 +14,18 @@ import {
   Landmark,
   ShieldCheck,
   Wrench,
-  PlusCircle
+  PlusCircle,
+  Database,
+  Hammer,
+  Cog
 } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
-import { PropertyClassification } from '../types/rpatis';
+import {
+  AssessmentDocket,
+  AssessmentRollRow,
+  MachineryClassification,
+  PropertyClassification
+} from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
 import { ViewEndorsementQueue } from './ViewEndorsementQueue';
 import { ViewLegacyVault } from './ViewLegacyVault';
@@ -26,11 +34,18 @@ import { ViewCertifications } from './assessor/ViewCertifications';
 import { ViewLiensMortgages } from './assessor/ViewLiensMortgages';
 import { ViewValidationPinId } from './assessor/ViewValidationPinId';
 import { ViewProblemResolution } from './assessor/ViewProblemResolution';
+import { ViewAssessmentRoll } from './assessor/ViewAssessmentRoll';
 
 const SMV_RATES: Record<PropertyClassification, { subclass: string; unitValue: number; level: number }> = {
   Residential: { subclass: 'R-1 (Residential First Class)', unitValue: 1200, level: 20 },
   Agricultural: { subclass: 'Ag-1 (Irrigated Riceland)', unitValue: 85, level: 40 },
   Commercial: { subclass: 'C-1 (Commercial Strip)', unitValue: 2500, level: 50 }
+};
+
+const MACHINERY_LEVELS: Record<MachineryClassification, number> = {
+  Agricultural: 40,
+  Residential: 50,
+  'Commercial / Industrial': 80
 };
 
 const TRANSFER_TRACKS: Record<'standard' | 'dar' | 'ejs', { label: string; docs: string[] }> = {
@@ -74,6 +89,7 @@ const TRANSFER_TRACKS: Record<'standard' | 'dar' | 'ejs', { label: string; docs:
 
 type AssessorSubView =
   | 'smvEngine'
+  | 'assessmentRoll'
   | 'queue'
   | 'certifications'
   | 'liens'
@@ -86,7 +102,7 @@ export const Screen1Assessor: React.FC = () => {
   const {
     currentUser,
     dockets,
-    activeDocketId,
+    assessmentRoll,
     setActiveDocketId,
     createOrUpdateDocket,
     endorseDocketsToCapitol,
@@ -95,35 +111,89 @@ export const Screen1Assessor: React.FC = () => {
 
   const [activeSubView, setActiveSubView] = useState<AssessorSubView>('smvEngine');
 
-  const activeDocket = dockets.find((d) => d.id === activeDocketId) || dockets[0];
+  const [selectedDocketId, setSelectedDocketId] = useState<string>('');
+  const selectedDocket = dockets.find((d) => d.id === selectedDocketId);
 
   const [transactionType, setTransactionType] = useState<'Discovery' | 'Transfer' | 'Reassessment' | 'Cancellation'>(
-    activeDocket.transactionType
+    'Discovery'
   );
   const [transferTrack, setTransferTrack] = useState<'standard' | 'dar' | 'ejs'>('standard');
   const [verifiedDocs, setVerifiedDocs] = useState<string[]>([]);
-  const [docketIdField, setDocketIdField] = useState(activeDocket.id);
-  const [pin, setPin] = useState(activeDocket.pin);
-  const [tdNo, setTdNo] = useState(activeDocket.tdNo);
-  const [lotNo, setLotNo] = useState(activeDocket.lotNo);
-  const [owner, setOwner] = useState(activeDocket.owner);
-  const [barangay, setBarangay] = useState(activeDocket.barangay);
-  const [classification, setClassification] = useState<PropertyClassification>(activeDocket.classification);
-  const [areaSqm, setAreaSqm] = useState<number>(activeDocket.areaSqm);
-  const [unitValue, setUnitValue] = useState<number>(activeDocket.unitValue);
-  const [assessmentLevel, setAssessmentLevel] = useState<number>(activeDocket.assessmentLevel);
+  const [docketIdField, setDocketIdField] = useState('');
+  const [pin, setPin] = useState('');
+  const [tdNo, setTdNo] = useState('');
+  const [lotNo, setLotNo] = useState('');
+  const [owner, setOwner] = useState('');
+  const [barangay, setBarangay] = useState('');
+  const [classification, setClassification] = useState<PropertyClassification>('Residential');
+  const [areaSqm, setAreaSqm] = useState<string>('');
+  const [unitValue, setUnitValue] = useState<string>('');
+  const [assessmentLevel, setAssessmentLevel] = useState<number>(20);
 
-  const [includeBuilding, setIncludeBuilding] = useState<boolean>(Boolean(activeDocket.building));
-  const [structuralType, setStructuralType] = useState(
-    activeDocket.building?.structuralType || 'Type III-A Concrete Bungalow'
-  );
-  const [floorArea, setFloorArea] = useState<number>(activeDocket.building?.floorAreaSqm || 120);
-  const [yearBuilt, setYearBuilt] = useState<number>(activeDocket.building?.yearBuilt || 2018);
-  const [depreciation, setDepreciation] = useState<number>(activeDocket.building?.depreciationPercent || 12);
+  const [includeBuilding, setIncludeBuilding] = useState<boolean>(false);
+  const [structuralType, setStructuralType] = useState('Type III-A Concrete Bungalow');
+  const [floorArea, setFloorArea] = useState<string>('');
+  const [yearBuilt, setYearBuilt] = useState<string>('');
+  const [depreciation, setDepreciation] = useState<string>('');
 
-  const loadDocketIntoForm = (id: string) => {
-    const found = dockets.find((d) => d.id === id);
-    if (!found) return;
+  const [includeStructure, setIncludeStructure] = useState<boolean>(false);
+  const [structureType, setStructureType] = useState<string>('');
+  const [structureDesc, setStructureDesc] = useState<string>('');
+  const [structureAreaOrUnits, setStructureAreaOrUnits] = useState<string>('');
+  const [structureYearBuilt, setStructureYearBuilt] = useState<string>('');
+  const [structureReplacementCost, setStructureReplacementCost] = useState<string>('');
+  const [structureDepreciation, setStructureDepreciation] = useState<string>('');
+  const [structureLevel, setStructureLevel] = useState<number>(20);
+
+  const [includeMachinery, setIncludeMachinery] = useState<boolean>(false);
+  const [machineryDesc, setMachineryDesc] = useState<string>('');
+  const [machineryBrandModel, setMachineryBrandModel] = useState<string>('');
+  const [machineryClass, setMachineryClass] = useState<MachineryClassification | ''>('');
+  const [machineryCost, setMachineryCost] = useState<string>('');
+  const [machineryYearAcquired, setMachineryYearAcquired] = useState<string>('');
+  const [machineryDepreciation, setMachineryDepreciation] = useState<string>('');
+
+  const resetOptionalComponents = () => {
+    setIncludeBuilding(false);
+    setFloorArea('');
+    setYearBuilt('');
+    setDepreciation('');
+    setIncludeStructure(false);
+    setStructureType('');
+    setStructureDesc('');
+    setStructureAreaOrUnits('');
+    setStructureYearBuilt('');
+    setStructureReplacementCost('');
+    setStructureDepreciation('');
+    setStructureLevel(20);
+    setIncludeMachinery(false);
+    setMachineryDesc('');
+    setMachineryBrandModel('');
+    setMachineryClass('');
+    setMachineryCost('');
+    setMachineryYearAcquired('');
+    setMachineryDepreciation('');
+  };
+
+  const handleStartNewDocket = () => {
+    setSelectedDocketId('');
+    setDocketIdField('');
+    setTdNo('');
+    setPin('');
+    setLotNo('');
+    setOwner('');
+    setBarangay('');
+    setTransactionType('Discovery');
+    setClassification('Residential');
+    setAreaSqm('');
+    setUnitValue('');
+    setAssessmentLevel(20);
+    resetOptionalComponents();
+    setVerifiedDocs([]);
+  };
+
+  const applyDocketObjectToForm = (found: AssessmentDocket) => {
+    setSelectedDocketId(found.id);
     setActiveDocketId(found.id);
     setDocketIdField(found.id);
     setTransactionType(found.transactionType);
@@ -133,92 +203,196 @@ export const Screen1Assessor: React.FC = () => {
     setOwner(found.owner);
     setBarangay(found.barangay);
     setClassification(found.classification);
-    setAreaSqm(found.areaSqm);
-    setUnitValue(found.unitValue);
+    setAreaSqm(found.areaSqm > 0 ? String(found.areaSqm) : '');
+    setUnitValue(found.unitValue > 0 ? String(found.unitValue) : '');
     setAssessmentLevel(found.assessmentLevel);
     setIncludeBuilding(Boolean(found.building));
     if (found.building) {
       setStructuralType(found.building.structuralType);
-      setFloorArea(found.building.floorAreaSqm);
-      setYearBuilt(found.building.yearBuilt);
-      setDepreciation(found.building.depreciationPercent);
+      setFloorArea(String(found.building.floorAreaSqm));
+      setYearBuilt(String(found.building.yearBuilt));
+      setDepreciation(String(found.building.depreciationPercent));
+    } else {
+      setFloorArea('');
+      setYearBuilt('');
+      setDepreciation('');
+    }
+    setIncludeStructure(Boolean(found.otherStructure));
+    if (found.otherStructure) {
+      setStructureType(found.otherStructure.structureType);
+      setStructureDesc(found.otherStructure.description);
+      setStructureAreaOrUnits(found.otherStructure.areaOrUnits ? String(found.otherStructure.areaOrUnits) : '');
+      setStructureYearBuilt(found.otherStructure.yearBuilt ? String(found.otherStructure.yearBuilt) : '');
+      setStructureReplacementCost(String(found.otherStructure.replacementCost));
+      setStructureDepreciation(String(found.otherStructure.depreciationPercent));
+      setStructureLevel(found.otherStructure.assessmentLevel);
+    } else {
+      setStructureType('');
+      setStructureDesc('');
+      setStructureAreaOrUnits('');
+      setStructureYearBuilt('');
+      setStructureReplacementCost('');
+      setStructureDepreciation('');
+      setStructureLevel(20);
+    }
+    setIncludeMachinery(Boolean(found.machinery));
+    if (found.machinery) {
+      setMachineryDesc(found.machinery.description);
+      setMachineryBrandModel(found.machinery.brandModel);
+      setMachineryClass(found.machinery.machineryClass);
+      setMachineryCost(String(found.machinery.acquisitionCost));
+      setMachineryYearAcquired(found.machinery.yearAcquired ? String(found.machinery.yearAcquired) : '');
+      setMachineryDepreciation(String(found.machinery.depreciationPercent));
+    } else {
+      setMachineryDesc('');
+      setMachineryBrandModel('');
+      setMachineryClass('');
+      setMachineryCost('');
+      setMachineryYearAcquired('');
+      setMachineryDepreciation('');
     }
   };
 
-  const handleStartNewDocket = () => {
-    const nextNum = 852 + dockets.length;
-    const newId = `PAS-2026-0${nextNum}`;
-    setDocketIdField(newId);
-    setTdNo(`TD-26-049${nextNum.toString().slice(-2)}`);
-    setPin(`024-18-0005-014-${nextNum.toString().slice(-2)}`);
-    setLotNo('');
-    setOwner('');
-    setBarangay('Brgy. Balogo, Pasacao');
-    setTransactionType('Discovery');
-    setClassification('Residential');
-    setAreaSqm(250);
-    setUnitValue(1200);
-    setAssessmentLevel(20);
-    setIncludeBuilding(false);
-    setVerifiedDocs([]);
+  const loadDocketIntoForm = (id: string) => {
+    if (!id) {
+      handleStartNewDocket();
+      return;
+    }
+    const found = dockets.find((d) => d.id === id);
+    if (!found) return;
+    applyDocketObjectToForm(found);
+  };
+
+  const loadRollRowIntoFaas = (row: AssessmentRollRow) => {
+    const existingDocket = dockets.find((d) => d.tdNo === row.tdNo || d.pin === row.pin);
+    if (existingDocket) {
+      loadDocketIntoForm(existingDocket.id);
+    } else {
+      setSelectedDocketId('');
+      setDocketIdField('');
+      setTransactionType('Reassessment');
+      setPin(row.pin);
+      setTdNo(row.tdNo);
+      setLotNo(`Brgy. ${row.barangay} Parcel`);
+      setOwner(row.ownerFull);
+      setBarangay(`Brgy. ${row.barangay}, Pasacao`);
+      setClassification(row.classification);
+      setAreaSqm(String(row.areaSqm));
+      setUnitValue(String(row.unitValue));
+      setAssessmentLevel(Math.round(row.assessmentLevel * 100));
+      resetOptionalComponents();
+    }
+    setActiveSubView('smvEngine');
   };
 
   const handleClassChange = (val: PropertyClassification) => {
     setClassification(val);
     const rateInfo = SMV_RATES[val];
-    setUnitValue(rateInfo.unitValue);
+    setUnitValue(String(rateInfo.unitValue));
     setAssessmentLevel(rateInfo.level);
   };
 
-  const landMarketValue = areaSqm * unitValue;
+  const areaNum = Number(areaSqm) || 0;
+  const unitValNum = Number(unitValue) || 0;
+  const floorAreaNum = Number(floorArea) || 0;
+  const yearBuiltNum = Number(yearBuilt) || 2026;
+  const depreciationNum = Number(depreciation) || 0;
+
+  const landMarketValue = areaNum * unitValNum;
   const landAssessedValue = (landMarketValue * assessmentLevel) / 100;
 
   const buildingUnitCost = 11500;
-  const buildingGross = includeBuilding ? floorArea * buildingUnitCost : 0;
-  const buildingMarketValue = includeBuilding ? Math.round(buildingGross * (1 - depreciation / 100)) : 0;
+  const buildingGross = includeBuilding ? floorAreaNum * buildingUnitCost : 0;
+  const buildingMarketValue = includeBuilding ? Math.round(buildingGross * (1 - depreciationNum / 100)) : 0;
   const buildingAssessedValue = includeBuilding ? Math.round(buildingMarketValue * 0.2) : 0;
 
-  const totalMarketValue = landMarketValue + buildingMarketValue;
-  const totalAssessedValue = landAssessedValue + buildingAssessedValue;
+  const structureCostNum = Number(structureReplacementCost) || 0;
+  const structureDepNum = Math.min(80, Math.max(0, Number(structureDepreciation) || 0));
+  const structureMarketValue = includeStructure ? Math.round(structureCostNum * (1 - structureDepNum / 100)) : 0;
+  const structureAssessedValue = includeStructure ? Math.round((structureMarketValue * structureLevel) / 100) : 0;
+
+  const machineryCostNum = Number(machineryCost) || 0;
+  const machineryDepNum = Math.min(80, Math.max(0, Number(machineryDepreciation) || 0));
+  const machineryLevel = machineryClass ? MACHINERY_LEVELS[machineryClass] : 0;
+  const machineryMarketValue = includeMachinery ? Math.round(machineryCostNum * (1 - machineryDepNum / 100)) : 0;
+  const machineryAssessedValue = includeMachinery ? Math.round((machineryMarketValue * machineryLevel) / 100) : 0;
+
+  const totalMarketValue = landMarketValue + buildingMarketValue + structureMarketValue + machineryMarketValue;
+  const totalAssessedValue =
+    landAssessedValue + buildingAssessedValue + structureAssessedValue + machineryAssessedValue;
+
+  const canSaveOrEndorse = owner.trim().length > 0 && pin.trim().length > 0 && totalMarketValue > 0;
 
   const handleSaveDraft = () => {
-    const ownerName = owner.trim() || 'Unnamed Declarant';
+    if (!canSaveOrEndorse) return null;
+    const ownerName = owner.trim();
     const parts = ownerName.split(' ');
     const masked =
       parts.length >= 2 ? `${parts[parts.length - 1]}, ${parts[0][0]}.` : ownerName;
+    const nextNum = 852 + dockets.length;
+    const resolvedId = docketIdField.trim() || `PAS-2026-0${nextNum}`;
+    const resolvedTd = tdNo.trim() || `TD-26-049${nextNum.toString().slice(-2)}`;
 
     createOrUpdateDocket({
-      ...activeDocket,
-      id: docketIdField,
-      capitolId: `CAP-${docketIdField}`,
+      id: resolvedId,
+      capitolId: `CAP-${resolvedId}`,
       lgu: 'Pasacao',
+      contact: selectedDocket?.contact || '',
       transactionType,
-      pin,
-      tdNo,
-      lotNo: lotNo || 'Lot Pending Survey',
+      pin: pin.trim(),
+      tdNo: resolvedTd,
+      lotNo: lotNo.trim() || 'Pending Survey Ref',
       owner: ownerName,
       ownerMasked: masked,
-      barangay,
+      barangay: barangay.trim() || 'Pasacao, Camarines Sur',
       classification,
       smvSubclass: SMV_RATES[classification].subclass,
-      areaSqm,
-      unitValue,
+      areaSqm: areaNum,
+      unitValue: unitValNum,
       assessmentLevel,
-      marketValue: landMarketValue,
-      assessedValue: landAssessedValue,
+      marketValue: totalMarketValue,
+      assessedValue: totalAssessedValue,
       building: includeBuilding
         ? {
             structuralType,
-            floorAreaSqm: floorArea,
-            yearBuilt,
-            depreciationPercent: depreciation,
+            floorAreaSqm: floorAreaNum,
+            yearBuilt: yearBuiltNum,
+            depreciationPercent: depreciationNum,
             unitCostPerSqm: buildingUnitCost
           }
         : undefined,
+      otherStructure:
+        includeStructure && structureCostNum > 0
+          ? {
+              structureType: structureType || 'Other Permanent Structure',
+              description: structureDesc.trim(),
+              areaOrUnits: Number(structureAreaOrUnits) || 0,
+              yearBuilt: Number(structureYearBuilt) || 2026,
+              replacementCost: structureCostNum,
+              depreciationPercent: structureDepNum,
+              assessmentLevel: structureLevel
+            }
+          : undefined,
+      machinery:
+        includeMachinery && machineryCostNum > 0 && machineryClass
+          ? {
+              description: machineryDesc.trim() || 'Taxable Machinery',
+              brandModel: machineryBrandModel.trim(),
+              machineryClass,
+              acquisitionCost: machineryCostNum,
+              yearAcquired: Number(machineryYearAcquired) || 2026,
+              depreciationPercent: machineryDepNum,
+              assessmentLevel: machineryLevel
+            }
+          : undefined,
       status: 'Needs Signature',
       submittedAt: 'March 18, 2026 • Just now',
-      deficiencies: activeDocket.id === docketIdField ? activeDocket.deficiencies : []
+      deficiencies: selectedDocket?.id === resolvedId ? selectedDocket.deficiencies : []
     });
+    setDocketIdField(resolvedId);
+    setTdNo(resolvedTd);
+    setSelectedDocketId(resolvedId);
+    return resolvedId;
   };
 
   const pasacaoPendingCount = dockets.filter(
@@ -252,6 +426,25 @@ export const Screen1Assessor: React.FC = () => {
               <span className="flex items-center gap-2.5">
                 <Calculator className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>FAAS Appraisal Engine</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubView('assessmentRoll')}
+              className={navBtnClass('assessmentRoll')}
+            >
+              <span className="flex items-center gap-2.5">
+                <Database className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Property Records (Roll)</span>
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-mono ${
+                  activeSubView === 'assessmentRoll'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200 text-slate-900'
+                }`}
+              >
+                {assessmentRoll.length}
               </span>
             </button>
             <button type="button" onClick={() => setActiveSubView('queue')} className={navBtnClass('queue')}>
@@ -312,7 +505,7 @@ export const Screen1Assessor: React.FC = () => {
             <button type="button" onClick={() => setActiveSubView('legacy')} className={navBtnClass('legacy')}>
               <span className="flex items-center gap-2.5">
                 <Archive className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>1949 Historical Vault</span>
+                <span>Historical Cadastre Vault</span>
               </span>
             </button>
             <button type="button" onClick={() => setActiveSubView('smvMatrix')} className={navBtnClass('smvMatrix')}>
@@ -350,6 +543,9 @@ export const Screen1Assessor: React.FC = () => {
 
       {/* Active Sub-View Content */}
       <div className="flex-1 overflow-y-auto">
+        {activeSubView === 'assessmentRoll' && (
+          <ViewAssessmentRoll onOpenPropertyInFaas={loadRollRowIntoFaas} />
+        )}
         {activeSubView === 'queue' && <ViewEndorsementQueue />}
         {activeSubView === 'certifications' && <ViewCertifications />}
         {activeSubView === 'liens' && <ViewLiensMortgages />}
@@ -357,7 +553,8 @@ export const Screen1Assessor: React.FC = () => {
         {activeSubView === 'problems' && <ViewProblemResolution />}
         {activeSubView === 'legacy' && (
           <ViewLegacyVault
-            onMigrateToDraft={() => {
+            onMigrateToDraft={(newDocket) => {
+              applyDocketObjectToForm(newDocket);
               setActiveSubView('smvEngine');
             }}
           />
@@ -366,7 +563,7 @@ export const Screen1Assessor: React.FC = () => {
           <ViewSmvMatrix
             onApplyRate={(cls, rate, level) => {
               setClassification(cls);
-              setUnitValue(rate);
+              setUnitValue(String(rate));
               setAssessmentLevel(level);
               setActiveSubView('smvEngine');
             }}
@@ -389,14 +586,15 @@ export const Screen1Assessor: React.FC = () => {
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label htmlFor="active-docket-select" className="block text-xs font-bold text-slate-700 mb-1">
-                    Active Docket Record
+                    Load Existing Docket (Optional)
                   </label>
                   <select
                     id="active-docket-select"
-                    value={activeDocket.id}
+                    value={selectedDocketId}
                     onChange={(e) => loadDocketIntoForm(e.target.value)}
                     className="min-h-[40px] bg-slate-50 border border-slate-400 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900"
                   >
+                    <option value="">-- New / Blank Appraisal Form --</option>
                     {dockets
                       .filter((d) => d.lgu === 'Pasacao')
                       .map((d) => (
@@ -413,10 +611,10 @@ export const Screen1Assessor: React.FC = () => {
                   className="min-h-[40px] px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
                 >
                   <PlusCircle className="w-4 h-4" aria-hidden="true" />
-                  <span>New Docket</span>
+                  <span>Clear / New Form</span>
                 </button>
 
-                <StatusChip status={activeDocket.status} size="md" />
+                <StatusChip status={selectedDocket?.status || 'Draft'} size="md" />
               </div>
             </div>
 
@@ -453,6 +651,7 @@ export const Screen1Assessor: React.FC = () => {
                       <input
                         id="faas-pin"
                         type="text"
+                        placeholder="e.g. 024-18-0012-005-22"
                         value={pin}
                         onChange={(e) => setPin(e.target.value)}
                         className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
@@ -466,6 +665,7 @@ export const Screen1Assessor: React.FC = () => {
                       <input
                         id="faas-owner"
                         type="text"
+                        placeholder="Enter owner full name..."
                         value={owner}
                         onChange={(e) => setOwner(e.target.value)}
                         className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
@@ -479,6 +679,7 @@ export const Screen1Assessor: React.FC = () => {
                       <input
                         id="faas-lot"
                         type="text"
+                        placeholder="e.g. Lot 4102-B, Psd-05-01294"
                         value={lotNo}
                         onChange={(e) => setLotNo(e.target.value)}
                         className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
@@ -579,8 +780,9 @@ export const Screen1Assessor: React.FC = () => {
                         id="land-area"
                         type="number"
                         min={1}
+                        placeholder="Enter area in sqm"
                         value={areaSqm}
-                        onChange={(e) => setAreaSqm(Math.max(0, Number(e.target.value)))}
+                        onChange={(e) => setAreaSqm(e.target.value)}
                         className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
                       />
                     </div>
@@ -593,8 +795,9 @@ export const Screen1Assessor: React.FC = () => {
                         id="unit-rate"
                         type="number"
                         min={1}
+                        placeholder="Enter rate per sqm"
                         value={unitValue}
-                        onChange={(e) => setUnitValue(Math.max(0, Number(e.target.value)))}
+                        onChange={(e) => setUnitValue(e.target.value)}
                         className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
                       />
                     </div>
@@ -654,8 +857,9 @@ export const Screen1Assessor: React.FC = () => {
                           id="bldg-area"
                           type="number"
                           min={0}
+                          placeholder="e.g. 120"
                           value={floorArea}
-                          onChange={(e) => setFloorArea(Math.max(0, Number(e.target.value)))}
+                          onChange={(e) => setFloorArea(e.target.value)}
                           className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
                         />
                       </div>
@@ -669,8 +873,9 @@ export const Screen1Assessor: React.FC = () => {
                           type="number"
                           min={1949}
                           max={2026}
+                          placeholder="e.g. 2018"
                           value={yearBuilt}
-                          onChange={(e) => setYearBuilt(Number(e.target.value))}
+                          onChange={(e) => setYearBuilt(e.target.value)}
                           className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
                         />
                       </div>
@@ -684,10 +889,276 @@ export const Screen1Assessor: React.FC = () => {
                           type="number"
                           min={0}
                           max={80}
+                          placeholder="e.g. 12"
                           value={depreciation}
-                          onChange={(e) => setDepreciation(Math.min(80, Math.max(0, Number(e.target.value))))}
+                          onChange={(e) => setDepreciation(e.target.value)}
                           className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
                         />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Other Permanent Structures & Improvements */}
+                <div className="space-y-3 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Hammer className="w-4 h-4 text-slate-700" aria-hidden="true" />
+                      <span>4. Other Permanent Structures &amp; Improvements</span>
+                    </h2>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeStructure}
+                        onChange={(e) => setIncludeStructure(e.target.checked)}
+                        className="w-4 h-4 accent-slate-900 rounded"
+                      />
+                      <span>Include Permanent Structure / Improvement</span>
+                    </label>
+                  </div>
+
+                  {includeStructure && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label htmlFor="struct-type" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Structure Type
+                        </label>
+                        <select
+                          id="struct-type"
+                          value={structureType}
+                          onChange={(e) => setStructureType(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                        >
+                          <option value="">-- Select structure type --</option>
+                          <option value="Perimeter Concrete Fence">Perimeter Concrete Fence</option>
+                          <option value="Retaining Wall / Riprap">Retaining Wall / Riprap</option>
+                          <option value="Deep Well / Overhead Water Tank">Deep Well / Overhead Water Tank</option>
+                          <option value="Swimming Pool">Swimming Pool</option>
+                          <option value="Concrete Pavement / Yard">Concrete Pavement / Yard</option>
+                          <option value="Warehouse Annex / Utility Shed">Warehouse Annex / Utility Shed</option>
+                          <option value="Wharf / Pier / Dock">Wharf / Pier / Dock</option>
+                          <option value="Other Permanent Structure">Other Permanent Structure</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label htmlFor="struct-desc" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Description / Material
+                        </label>
+                        <input
+                          id="struct-desc"
+                          type="text"
+                          placeholder="e.g. CHB perimeter wall with steel gate"
+                          value={structureDesc}
+                          onChange={(e) => setStructureDesc(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="struct-area" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Area / Linear Meters / Units
+                        </label>
+                        <input
+                          id="struct-area"
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 85"
+                          value={structureAreaOrUnits}
+                          onChange={(e) => setStructureAreaOrUnits(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="struct-year" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Year Built / Completed
+                        </label>
+                        <input
+                          id="struct-year"
+                          type="number"
+                          min={1949}
+                          max={2026}
+                          placeholder="e.g. 2020"
+                          value={structureYearBuilt}
+                          onChange={(e) => setStructureYearBuilt(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="struct-cost" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Replacement Cost New (PHP)
+                        </label>
+                        <input
+                          id="struct-cost"
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 350000"
+                          value={structureReplacementCost}
+                          onChange={(e) => setStructureReplacementCost(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="struct-dep" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Depreciation (%)
+                        </label>
+                        <input
+                          id="struct-dep"
+                          type="number"
+                          min={0}
+                          max={80}
+                          placeholder="e.g. 15"
+                          value={structureDepreciation}
+                          onChange={(e) => setStructureDepreciation(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label htmlFor="struct-level" className="block text-xs font-semibold text-slate-800 mb-1">
+                          Statutory Assessment Level
+                        </label>
+                        <select
+                          id="struct-level"
+                          value={structureLevel}
+                          onChange={(e) => setStructureLevel(Number(e.target.value))}
+                          className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                        >
+                          <option value={20}>20% — Residential</option>
+                          <option value={40}>40% — Agricultural</option>
+                          <option value={50}>50% — Commercial / Industrial</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Machinery Appraisal (RA 7160 Sec. 218(c) & Sec. 225) */}
+                <div className="space-y-3 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Cog className="w-4 h-4 text-slate-700" aria-hidden="true" />
+                      <span>5. Machinery Appraisal (RA 7160 Sec. 218(c) &amp; Sec. 225)</span>
+                    </h2>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeMachinery}
+                        onChange={(e) => setIncludeMachinery(e.target.checked)}
+                        className="w-4 h-4 accent-slate-900 rounded"
+                      />
+                      <span>Include Taxable Machinery</span>
+                    </label>
+                  </div>
+
+                  {includeMachinery && (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="mach-desc" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Machinery / Equipment Name
+                          </label>
+                          <input
+                            id="mach-desc"
+                            type="text"
+                            placeholder="e.g. Rice Mill Polisher / Industrial Generator"
+                            value={machineryDesc}
+                            onChange={(e) => setMachineryDesc(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="mach-brand" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Brand / Model / Serial No.
+                          </label>
+                          <input
+                            id="mach-brand"
+                            type="text"
+                            placeholder="e.g. Kubota / Serial #KM-4821"
+                            value={machineryBrandModel}
+                            onChange={(e) => setMachineryBrandModel(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs text-slate-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="mach-class" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Machinery Class &amp; Statutory Rate
+                          </label>
+                          <select
+                            id="mach-class"
+                            value={machineryClass}
+                            onChange={(e) => setMachineryClass(e.target.value as MachineryClassification | '')}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                          >
+                            <option value="">-- Select machinery class --</option>
+                            <option value="Agricultural">Agricultural (40% Assessment Level)</option>
+                            <option value="Residential">Residential (50% Assessment Level)</option>
+                            <option value="Commercial / Industrial">
+                              Commercial / Industrial (80% Assessment Level)
+                            </option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label htmlFor="mach-cost" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Acquisition / Replacement Cost (PHP)
+                          </label>
+                          <input
+                            id="mach-cost"
+                            type="number"
+                            min={0}
+                            placeholder="e.g. 650000"
+                            value={machineryCost}
+                            onChange={(e) => setMachineryCost(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="mach-year" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Year Acquired / Installed
+                          </label>
+                          <input
+                            id="mach-year"
+                            type="number"
+                            min={1949}
+                            max={2026}
+                            placeholder="e.g. 2022"
+                            value={machineryYearAcquired}
+                            onChange={(e) => setMachineryYearAcquired(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="mach-dep" className="block text-xs font-semibold text-slate-800 mb-1">
+                            Accumulated Depreciation (%)
+                          </label>
+                          <input
+                            id="mach-dep"
+                            type="number"
+                            min={0}
+                            max={80}
+                            placeholder="0–80 (20% residual floor)"
+                            value={machineryDepreciation}
+                            onChange={(e) => setMachineryDepreciation(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-2 text-xs text-blue-950">
+                        <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+                        <div>
+                          <strong>RA 7160 Sec. 225 Residual Floor:</strong> Accumulated machinery depreciation is
+                          statutorily capped at <strong>80%</strong> (minimum 20% remaining residual value while in
+                          operation).
+                        </div>
                       </div>
                     </div>
                   )}
@@ -697,8 +1168,9 @@ export const Screen1Assessor: React.FC = () => {
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                   <button
                     type="button"
+                    disabled={!canSaveOrEndorse}
                     onClick={handleSaveDraft}
-                    className="min-h-[44px] px-4 py-2.5 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
+                    className="min-h-[44px] px-4 py-2.5 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-100 disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
                   >
                     <Save className="w-4 h-4" aria-hidden="true" />
                     <span>Save Appraisal Draft</span>
@@ -706,12 +1178,15 @@ export const Screen1Assessor: React.FC = () => {
 
                   <button
                     type="button"
+                    disabled={!canSaveOrEndorse}
                     onClick={() => {
-                      handleSaveDraft();
-                      endorseDocketsToCapitol([docketIdField]);
-                      setActiveSubView('queue');
+                      const savedId = handleSaveDraft();
+                      if (savedId) {
+                        endorseDocketsToCapitol([savedId]);
+                        setActiveSubView('queue');
+                      }
                     }}
-                    className="min-h-[44px] px-5 py-2.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
+                    className="min-h-[44px] px-5 py-2.5 bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-600 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
                   >
                     <Send className="w-4 h-4 text-emerald-400" aria-hidden="true" />
                     <span>Sign Recommending Approval &amp; Endorse to Pili</span>
@@ -739,12 +1214,12 @@ export const Screen1Assessor: React.FC = () => {
                   <div>
                     <span className="text-slate-600 block font-semibold">Docket / TD No.</span>
                     <span className="font-mono font-bold text-slate-900">
-                      {docketIdField} / {tdNo}
+                      {docketIdField || 'New Draft'} / {tdNo || 'Pending TD'}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-600 block font-semibold">Property Index No.</span>
-                    <span className="font-mono font-bold text-slate-900">{pin}</span>
+                    <span className="font-mono font-bold text-slate-900">{pin || 'Pending PIN'}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-slate-600 block font-semibold">Owner / Declarant</span>
@@ -753,7 +1228,7 @@ export const Screen1Assessor: React.FC = () => {
                   <div className="col-span-2">
                     <span className="text-slate-600 block font-semibold">Location &amp; Cadastral Lot</span>
                     <span className="text-slate-900 font-medium">
-                      {lotNo || 'Pending Lot Ref'} — {barangay}
+                      {lotNo || 'Pending Lot Ref'} — {barangay || 'Pasacao, Camarines Sur'}
                     </span>
                   </div>
                 </div>
@@ -768,26 +1243,28 @@ export const Screen1Assessor: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      <tr>
-                        <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-900">{classification} Land</div>
-                          <div className="text-slate-600 font-mono">
-                            {areaSqm.toLocaleString()} sqm × ₱{unitValue.toLocaleString()} ({assessmentLevel}%)
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-900">
-                          ₱{landMarketValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                          ₱{landAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
+                      {(landMarketValue > 0 || (!includeBuilding && !includeStructure && !includeMachinery)) && (
+                        <tr>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">{classification} Land</div>
+                            <div className="text-slate-600 font-mono">
+                              {areaNum.toLocaleString()} sqm × ₱{unitValNum.toLocaleString()} ({assessmentLevel}%)
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-900">
+                            ₱{landMarketValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                            ₱{landAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      )}
                       {includeBuilding && (
                         <tr>
                           <td className="py-2.5 px-3">
                             <div className="font-bold text-slate-900">{structuralType}</div>
                             <div className="text-slate-600 font-mono">
-                              {floorArea} sqm • Built {yearBuilt} ({depreciation}% dep.)
+                              {floorAreaNum} sqm • Built {yearBuilt || '—'} ({depreciationNum}% dep.)
                             </div>
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-slate-900">
@@ -795,6 +1272,45 @@ export const Screen1Assessor: React.FC = () => {
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
                             ₱{buildingAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      )}
+                      {includeStructure && (
+                        <tr>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">
+                              {structureType || 'Other Permanent Structure'}
+                            </div>
+                            <div className="text-slate-600 font-mono">
+                              {structureDesc ? `${structureDesc} • ` : ''}Built {structureYearBuilt || '—'} (
+                              {structureDepNum}% dep. • {structureLevel}%)
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-900">
+                            ₱{structureMarketValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                            ₱{structureAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      )}
+                      {includeMachinery && (
+                        <tr>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">
+                              {machineryDesc || 'Taxable Machinery'}
+                            </div>
+                            <div className="text-slate-600 font-mono">
+                              {machineryBrandModel ? `${machineryBrandModel} • ` : ''}
+                              {machineryClass || 'Unclassified'} ({machineryLevel}%) • Acq.{' '}
+                              {machineryYearAcquired || '—'} ({machineryDepNum}% dep.)
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-900">
+                            ₱{machineryMarketValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                            ₱{machineryAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
                       )}

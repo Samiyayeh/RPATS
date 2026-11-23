@@ -98,13 +98,14 @@ export const ViewProblemResolution: React.FC = () => {
                   />
                   <button
                     type="button"
+                    disabled={!resubmitNotes[d.id]?.trim()}
                     onClick={() => {
-                      const note =
-                        resubmitNotes[d.id]?.trim() ||
-                        'Uploaded amended geodetic CIS sketch certified by Geodetic Engineer.';
+                      const note = resubmitNotes[d.id]?.trim();
+                      if (!note) return;
                       resubmitFlaggedDocket(d.id, note);
+                      setResubmitNotes((prev) => ({ ...prev, [d.id]: '' }));
                     }}
-                    className="min-h-[42px] px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shrink-0"
+                    className="min-h-[42px] px-4 py-2 bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shrink-0"
                   >
                     <Send className="w-4 h-4 text-emerald-400" aria-hidden="true" />
                     <span>Upload Fix &amp; Resubmit to Pili</span>
