@@ -17,7 +17,8 @@ import {
   PlusCircle,
   Database,
   Hammer,
-  Cog
+  Cog,
+  Map as MapIcon
 } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
 import {
@@ -36,6 +37,7 @@ import { ViewLiensMortgages } from './assessor/ViewLiensMortgages';
 import { ViewValidationPinId } from './assessor/ViewValidationPinId';
 import { ViewProblemResolution } from './assessor/ViewProblemResolution';
 import { ViewAssessmentRoll } from './assessor/ViewAssessmentRoll';
+import { ViewCadastralTaxMap } from './assessor/ViewCadastralTaxMap';
 
 const SMV_RATES: Record<PropertyClassification, { subclass: string; unitValue: number; level: number }> = {
   Residential: { subclass: 'R-1 (Residential First Class)', unitValue: 1200, level: 20 },
@@ -91,6 +93,7 @@ const TRANSFER_TRACKS: Record<'standard' | 'dar' | 'ejs', { label: string; docs:
 type AssessorSubView =
   | 'smvEngine'
   | 'assessmentRoll'
+  | 'taxMap'
   | 'queue'
   | 'certifications'
   | 'liens'
@@ -415,6 +418,7 @@ export const Screen1Assessor: React.FC = () => {
 const ASSESSOR_VIEW_LABELS: Record<AssessorSubView, string> = {
   smvEngine: 'FAAS Appraisal Engine',
   assessmentRoll: 'Property Records (Roll)',
+  taxMap: 'Cadastral Tax Map',
   queue: 'Endorsement Queue',
   certifications: 'Certifications & CTC',
   liens: 'Liens & Mortgages',
@@ -466,6 +470,16 @@ const ASSESSOR_VIEW_LABELS: Record<AssessorSubView, string> = {
                 }`}
               >
                 {assessmentRoll.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubView('taxMap')}
+              className={navBtnClass('taxMap')}
+            >
+              <span className="flex items-center gap-2.5">
+                <MapIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Cadastral Tax Map</span>
               </span>
             </button>
             <button type="button" onClick={() => setActiveSubView('queue')} className={navBtnClass('queue')}>
@@ -559,6 +573,15 @@ const ASSESSOR_VIEW_LABELS: Record<AssessorSubView, string> = {
       {/* Active Sub-View Content */}
         {activeSubView === 'assessmentRoll' && (
           <ViewAssessmentRoll onOpenPropertyInFaas={loadRollRowIntoFaas} />
+        )}
+        {activeSubView === 'taxMap' && (
+          <ViewCadastralTaxMap
+            onOpenPropertyInFaas={loadRollRowIntoFaas}
+            onOpenDocketInFaas={(docket) => {
+              applyDocketObjectToForm(docket);
+              setActiveSubView('smvEngine');
+            }}
+          />
         )}
         {activeSubView === 'queue' && <ViewEndorsementQueue />}
         {activeSubView === 'certifications' && <ViewCertifications />}

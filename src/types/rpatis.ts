@@ -186,7 +186,13 @@ export interface OcularInspectionRequest {
 export interface AssessmentProblemTicket {
   id: string;
   referenceNo: string;
-  category: 'Valuation Query' | 'Duplicate PIN / Boundary' | 'Ownership Correction' | 'Other Assessment Concern';
+  category:
+    | 'Valuation Query'
+    | 'Duplicate PIN / Boundary'
+    | 'Ownership Correction'
+    | 'Unassessed Structure'
+    | 'Usage / Class Mismatch'
+    | 'Other Assessment Concern';
   clientName: string;
   description: string;
   resolutionNotes?: string;
@@ -230,5 +236,48 @@ export interface SmvNoticeRevision {
   remarks: string;
   updatedBy: string;
   updatedAt: string;
+}
+
+export interface BlgfPinReservation {
+  id: string;
+  pin: string;
+  arpNo?: string;
+  provCode: string;
+  munCode: string;
+  brgyCode: string;
+  brgyName: string;
+  secCode: string;
+  parcelCode: string;
+  bldgCode?: string;
+  tdNo?: string;
+  remarks?: string;
+  reservedBy: string;
+  reservedAt: string;
+}
+
+export interface LandImprovementLink {
+  id: string;
+  landTdNo: string;
+  landPin: string;
+  bldgPin: string;
+  bldgCode: string;
+  structureType: 'Residential Building' | 'Commercial Building' | 'Industrial / Warehouse' | 'Other Structure / Machinery';
+  description: string;
+  floorAreaSqm: number;
+  yearBuilt: string;
+  linkedAt: string;
+}
+
+export interface MappedParcelGeometry {
+  key: string; // tdNo or pin identifier
+  tdNo?: string;
+  pin: string;
+  coords: [number, number][];
+  lotCode: string;
+  actualUsage?: string;
+  surveyBearing?: string;
+  computedAreaSqm: number;
+  plottedBy: string;
+  plottedAt: string;
 }
 

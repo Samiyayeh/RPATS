@@ -5,8 +5,27 @@ import { AssessmentRollRow } from '../../types/rpatis';
 import { StatusChip } from '../common/StatusChip';
 
 export const ViewValidationPinId: React.FC = () => {
-  const { assessmentRoll, dockets, ocularRequests, scheduleOcularInspection, markOcularVerified, pushToast } =
-    useRpatis();
+  const {
+    assessmentRoll,
+    dockets,
+    ocularRequests,
+    pinReservations,
+    scheduleOcularInspection,
+    markOcularVerified,
+    reserveBlgfPin,
+    pushToast
+  } = useRpatis();
+
+  const BRGY_NAMES: Record<string, string> = {
+    '01': 'Balogo',
+    '02': 'Caranan',
+    '03': 'Dalupaon',
+    '04': 'Odicon',
+    '05': 'Tinalmud',
+    '06': 'Macad',
+    '07': 'Cuco',
+    '08': 'Itulan'
+  };
   const [subTab, setSubTab] = useState<'validation' | 'pin' | 'ocular'>('validation');
 
   // Service 1: TD Validation (by TD No., PIN, or Owner Name)
@@ -65,7 +84,9 @@ export const ViewValidationPinId: React.FC = () => {
   const proposedArp = hasPinInputs ? `ARP-PAS-2026-${sectionCode.trim()}${parcelCode.trim()}` : '';
   const pinCollision =
     hasPinInputs &&
-    (assessmentRoll.some((r) => r.pin === proposedPin) || dockets.some((d) => d.pin === proposedPin));
+    (assessmentRoll.some((r) => r.pin === proposedPin) ||
+      dockets.some((d) => d.pin === proposedPin) ||
+      pinReservations.some((p) => p.pin === proposedPin));
 
   // Service 3: Property Identification & Ocular Inspection
   const [ocRequestor, setOcRequestor] = useState('');
@@ -407,11 +428,17 @@ export const ViewValidationPinId: React.FC = () => {
               type="button"
               disabled={!hasPinInputs || pinCollision}
               onClick={() => {
-                pushToast(
-                  'PIN & ARP Assigned',
-                  `Reserved unique PIN ${proposedPin} and ${proposedArp} in Pasacao Cadastre Index.`,
-                  'success'
-                );
+                reserveBlgfPin({
+                  pin: proposedPin,
+                  arpNo: proposedArp,
+                  provCode: '024',
+                  munCode: '18',
+                  brgyCode: barangayCode.padStart(4, '0'),
+                  brgyName: BRGY_NAMES[barangayCode] || 'Pasacao',
+                  secCode: sectionCode.trim(),
+                  parcelCode: parcelCode.trim(),
+                  remarks: 'Reserved via PIN & ARP Validation Control'
+                });
                 setSectionCode('');
                 setParcelCode('');
               }}

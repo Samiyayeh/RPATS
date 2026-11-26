@@ -683,3 +683,31 @@ Audit every workflow across the frontend to catalog real functional bugs vs. pro
 - Define REST endpoints, multipart file uploads, bcrypt + `HttpOnly` JWT RBAC middleware, server-side RA 7160 valuation/SHA-256 verification, and `<1s` SSE cross-office synchronization, plus remediation plans for all audited functional gaps.
 ```
 - **Outcome:** Audited 8 code-level functional gaps and documented the complete backend blueprint in `BACKEND_PLAN.md` ahead of full-stack implementation.
+
+---
+
+### Prompt 18 — Module 4: Cadastral Land Parcel Registry & Interactive GIS Tax Mapping Visualizer
+```text
+Design and implement Module 4 of RPAT-IOSS: an interactive, BLGF/RA 7160-compliant **Cadastral Land Parcel Registry & GIS Tax Mapping Visualizer** anchored inside the Municipal Assessor workspace (`Appraisal & Endorsement -> Cadastral Tax Map`), backed by shared reactive state (`RpatisContext`) and real-time Leaflet GIS mapping:
+
+1. **Web Cadastral Boundary Viewer (Real Leaflet GIS Map):**
+   - Render a live georeferenced Leaflet map centered on Pasacao, Camarines Sur (`Cad. 544-D`) with collapsible-sidebar resize handling (`ResizeObserver`), `Fit All Parcels` bounds framing, Parcel Label toggles, and three switchable basemaps: CARTO Voyager **Street** (primary), Esri World Imagery **Satellite** with reference places overlay, and CARTO Positron **Minimal** (configured with authenticated CARTO basemap key support).
+   - Provide choropleth switching between **By Land Class** (Residential 20%, Agricultural 40%, Commercial 50%) and **By Tax Status** (`Unpaid`, `Partial`, `Paid`), plus a Parcel Inspector displaying declared owner, lot reference, RA 7160 classification, actual land usage, survey bearing, GPS centroid, market/assessed valuations, and Annual RPT dues.
+   - Highlight parcels carrying unresolved field discrepancies with dashed crimson outlines (`dashArray`) and map label badges, and provide a searchable, priority-sorted Parcel Index synced bidirectionally with map click selection.
+
+2. **Standardized BLGF PIN Generator (`Prov-Mun-Brgy-Sec-Parcel-Bldg`):**
+   - Build a 6-segment Bureau of Local Government Finance (BLGF) Property Index Number generator (`024-18-<Brgy>-<Sec>-<Parcel>-<Bldg>`, defaulting land-only structures to `0000`) with real-time duplicate collision detection across `assessmentRoll`, `dockets`, and persistent `pinReservations` (synchronized with `ViewValidationPinId.tsx`), 1-click clipboard copy, and a reserved PIN audit log.
+
+3. **Improvement-to-Land Linkage (`<LandPIN>-<BldgCode>`):**
+   - Enable Assessors to link Residential Buildings, Commercial Buildings, Industrial Warehouses, and Other Structures / Machinery directly to a parent land parcel's PIN (`improvementLinks`), tracking floor area (sqm) and year constructed while reflecting linked building counts on map tooltips and the Parcel Inspector.
+
+4. **Field Discrepancy Logger & Resolution Sync:**
+   - Integrate an inline Discrepancy Logger targeting the active parcel (`Unassessed Structure`, `Duplicate PIN / Boundary Conflict`, `Usage / Class Mismatch`, `Ownership Correction`) that writes live to `logAssessmentProblem` in the Assessor's `Problem & Deficiency Log`, flags the parcel polygon on the GIS map, and allows inline ticket resolution via `resolveAssessmentProblem`.
+
+5. **User-Friendly Interactive Parcel Plotting & Boundary Re-Plotting:**
+   - Provide a guided **`+ Plot New Parcel`** workflow and per-parcel **`Re-Plot Lot Boundary on Map`** mode featuring two intuitive digitizing tools:
+     * **Trace Corners:** Click 3+ lot corners directly on the map with numbered vertex markers, `Undo Point`, `Clear`, and real-time geodesic area estimation (`sqm`).
+     * **1-Click Lot:** Click once anywhere on the map to drop an editable rectangular lot footprint.
+   - Persist drawn polygons in `customParcelGeometries` (`MappedParcelGeometry`), auto-populate or validate standardized BLGF PINs, compute preliminary SMV valuations from live `smvRates`, and create a `Draft` FAAS docket (`Draft / Pending CIS` dashed indigo polygon) with one-click **`Save Plotted Parcel to Map`** or **`Save & Open in FAAS Appraisal`** handoff so new properties follow statutory Municipal-to-Provincial Capitol CIS review while retaining their mapped boundary upon approval.
+```
+- **Outcome:** Installed `leaflet` and `@types/leaflet`; added `BlgfPinReservation`, `LandImprovementLink`, `MappedParcelGeometry`, and expanded `AssessmentProblemTicket` categories in `src/types/rpatis.ts`; wired persistent cadastral state and actions (`pinReservations`, `improvementLinks`, `customParcelGeometries`, `reserveBlgfPin`, `linkImprovementToLand`, `saveParcelGeometry`) in `src/context/RpatisContext.tsx`; synced PIN reservation validation in `ViewValidationPinId.tsx`; added `.rpat-map-label` styling in `src/index.css`; wired `onOpenDocketInFaas` in `Screen1Assessor.tsx`; and built `src/components/assessor/ViewCadastralTaxMap.tsx`.

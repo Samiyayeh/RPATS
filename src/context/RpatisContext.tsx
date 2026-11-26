@@ -3,9 +3,12 @@ import {
   AssessmentDocket,
   AssessmentProblemTicket,
   AssessmentRollRow,
+  BlgfPinReservation,
   CertificationRequest,
+  LandImprovementLink,
   LegacyArchiveRecord,
   LienAnnotationRecord,
+  MappedParcelGeometry,
   OcularInspectionRequest,
   OfficeRole,
   PropertyClassification,
@@ -57,6 +60,18 @@ interface RpatisContextType {
   smvRates: SmvRateEntry[];
   activeSmvNotice: { ref: string; effectiveDate: string };
   smvRevisions: SmvNoticeRevision[];
+  pinReservations: BlgfPinReservation[];
+  improvementLinks: LandImprovementLink[];
+  customParcelGeometries: MappedParcelGeometry[];
+  reserveBlgfPin: (
+    entry: Omit<BlgfPinReservation, 'id' | 'reservedBy' | 'reservedAt'>
+  ) => BlgfPinReservation;
+  linkImprovementToLand: (
+    entry: Omit<LandImprovementLink, 'id' | 'linkedAt'>
+  ) => LandImprovementLink;
+  saveParcelGeometry: (
+    geo: Omit<MappedParcelGeometry, 'plottedBy' | 'plottedAt'>
+  ) => void;
   issueCertification: (cert: Omit<CertificationRequest, 'id' | 'issuedAt' | 'status'>) => CertificationRequest;
   recordLienAnnotation: (lien: Omit<LienAnnotationRecord, 'id' | 'recordedAt' | 'status'>) => void;
   scheduleOcularInspection: (req: Omit<OcularInspectionRequest, 'id' | 'status'>) => void;
@@ -231,6 +246,34 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [smvRevisions, setSmvRevisions] = useState<SmvNoticeRevision[]>([]);
+  const [pinReservations, setPinReservations] = useState<BlgfPinReservation[]>([]);
+  const [improvementLinks, setImprovementLinks] = useState<LandImprovementLink[]>([
+    {
+      id: 'IMP-001',
+      landTdNo: 'TD-26-04912',
+      landPin: '024-18-0012-005-22',
+      bldgPin: '024-18-0012-005-22-1001',
+      bldgCode: '1001',
+      structureType: 'Residential Building',
+      description: 'Type III-A Concrete Bungalow',
+      floorAreaSqm: 145,
+      yearBuilt: '2019',
+      linkedAt: 'March 12, 2026'
+    },
+    {
+      id: 'IMP-002',
+      landTdNo: 'TD-26-0003',
+      landPin: '041-03-007',
+      bldgPin: '041-03-007-1001',
+      bldgCode: '1001',
+      structureType: 'Commercial Building',
+      description: '2-Storey Commercial Building',
+      floorAreaSqm: 280,
+      yearBuilt: '2021',
+      linkedAt: 'March 14, 2026'
+    }
+  ]);
+  const [customParcelGeometries, setCustomParcelGeometries] = useState<MappedParcelGeometry[]>([]);
 
   const pushToast = (
     title: string,
@@ -706,6 +749,68 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  const reserveBlgfPin = (
+    entry: Omit<BlgfPinReservation, 'id' | 'reservedBy' | 'reservedAt'>
+  ): BlgfPinReservation => {
+    const newEntry: BlgfPinReservation = {
+      ...entry,
+      id: `PIN-${Date.now()}`,
+      reservedBy: currentUser?.name || 'Municipal Assessor Office',
+      reservedAt: 'March 18, 2026 • Just now'
+    };
+    setPinReservations((prev) => [newEntry, ...prev]);
+    pushToast(
+      'BLGF PIN Reserved',
+      `Registered standardized PIN ${newEntry.pin} (${newEntry.brgyName}) in Pasacao Cadastre Index.`,
+      'success'
+    );
+    return newEntry;
+  };
+
+  const linkImprovementToLand = (
+    entry: Omit<LandImprovementLink, 'id' | 'linkedAt'>
+  ): LandImprovementLink => {
+    const newLink: LandImprovementLink = {
+      ...entry,
+      id: `IMP-${Date.now()}`,
+      linkedAt: 'March 18, 2026 • Just now'
+    };
+    setImprovementLinks((prev) => [newLink, ...prev]);
+    pushToast(
+      'Improvement Linked to Land PIN',
+      `Linked ${newLink.structureType} (${newLink.bldgPin}) to ${newLink.landTdNo}.`,
+      'success'
+    );
+    return newLink;
+  };
+
+  const saveParcelGeometry = (
+    geo: Omit<MappedParcelGeometry, 'plottedBy' | 'plottedAt'>
+  ) => {
+    const saved: MappedParcelGeometry = {
+      ...geo,
+      plottedBy: currentUser?.name || 'Municipal Assessor Office',
+      plottedAt: 'March 18, 2026 • Just now'
+    };
+    setCustomParcelGeometries((prev) => {
+      const idx = prev.findIndex(
+        (g) =>
+          g.key === geo.key ||
+          (geo.tdNo && g.tdNo === geo.tdNo) ||
+          g.pin === geo.pin
+      );
+      if (idx >= 0) {
+        return prev.map((g, i) => (i === idx ? saved : g));
+      }
+      return [saved, ...prev];
+    });
+    pushToast(
+      'Parcel Boundary Mapped',
+      `Saved ${geo.tdNo || geo.pin} polygon (~${geo.computedAreaSqm.toLocaleString()} sqm) to Cadastral Tax Map.`,
+      'success'
+    );
+  };
+
   return (
     <RpatisContext.Provider
       value={{
@@ -742,6 +847,12 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addLegacyRecord,
         migrateLegacyToModern,
         updateSmvFromNotice,
+        pinReservations,
+        improvementLinks,
+        customParcelGeometries,
+        reserveBlgfPin,
+        linkImprovementToLand,
+        saveParcelGeometry,
         toasts,
         pushToast,
         dismissToast
