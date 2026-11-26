@@ -27,6 +27,7 @@ import {
   PropertyClassification
 } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+import { CollapsibleSidebarLayout } from './layout/CollapsibleSidebarLayout';
 import { ViewEndorsementQueue } from './ViewEndorsementQueue';
 import { ViewLegacyVault } from './ViewLegacyVault';
 import { ViewSmvMatrix } from './ViewSmvMatrix';
@@ -100,14 +101,23 @@ type AssessorSubView =
 
 export const Screen1Assessor: React.FC = () => {
   const {
-    currentUser,
     dockets,
     assessmentRoll,
+    smvRates,
+    activeSmvNotice,
     setActiveDocketId,
     createOrUpdateDocket,
     endorseDocketsToCapitol,
     problemTickets
   } = useRpatis();
+
+  const getPrimaryRateInfo = (cls: PropertyClassification) => {
+    const liveMatch = smvRates.find((r) => r.category === cls);
+    if (liveMatch) {
+      return { subclass: liveMatch.subclass, unitValue: liveMatch.rate, level: liveMatch.level };
+    }
+    return SMV_RATES[cls];
+  };
 
   const [activeSubView, setActiveSubView] = useState<AssessorSubView>('smvEngine');
 
@@ -287,7 +297,7 @@ export const Screen1Assessor: React.FC = () => {
 
   const handleClassChange = (val: PropertyClassification) => {
     setClassification(val);
-    const rateInfo = SMV_RATES[val];
+    const rateInfo = getPrimaryRateInfo(val);
     setUnitValue(String(rateInfo.unitValue));
     setAssessmentLevel(rateInfo.level);
   };
@@ -346,7 +356,7 @@ export const Screen1Assessor: React.FC = () => {
       ownerMasked: masked,
       barangay: barangay.trim() || 'Pasacao, Camarines Sur',
       classification,
-      smvSubclass: SMV_RATES[classification].subclass,
+      smvSubclass: getPrimaryRateInfo(classification).subclass,
       areaSqm: areaNum,
       unitValue: unitValNum,
       assessmentLevel,
@@ -402,6 +412,18 @@ export const Screen1Assessor: React.FC = () => {
     dockets.filter((d) => d.lgu === 'Pasacao' && d.status === 'Flagged').length +
     problemTickets.filter((t) => t.status === 'Open').length;
 
+const ASSESSOR_VIEW_LABELS: Record<AssessorSubView, string> = {
+  smvEngine: 'FAAS Appraisal Engine',
+  assessmentRoll: 'Property Records (Roll)',
+  queue: 'Endorsement Queue',
+  certifications: 'Certifications & CTC',
+  liens: 'Liens & Mortgages',
+  validationPin: 'TD Validation & PIN/ARP',
+  legacy: 'Historical Cadastre Vault',
+  smvMatrix: 'SMV Matrix 2024',
+  problems: 'Problem & Deficiency Log'
+};
+
   const navBtnClass = (view: AssessorSubView) =>
     `w-full min-h-[42px] flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
       activeSubView === view
@@ -410,13 +432,12 @@ export const Screen1Assessor: React.FC = () => {
     }`;
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 w-full bg-slate-50 text-slate-900">
-      {/* Grouped Municipal Assessor Sidebar (All 11 Official Frontline Services) */}
-      <aside
-        aria-label="Municipal Assessor Navigation"
-        className="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-300 flex flex-col justify-between shrink-0"
-      >
-        <div className="p-4 space-y-5 overflow-y-auto">
+    <CollapsibleSidebarLayout
+      ariaLabel="Municipal Assessor Navigation"
+      sidebarSubtitle="Municipality of Pasacao • Frontline & FAAS"
+      activeSectionLabel={ASSESSOR_VIEW_LABELS[activeSubView]}
+      sidebarContent={
+        <div className="space-y-5">
           {/* Group 1: Appraisal & Endorsement */}
           <div className="space-y-1.5">
             <div className="px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -533,16 +554,9 @@ export const Screen1Assessor: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-900">Acting Officer</div>
-          <div>{currentUser?.name}</div>
-          <div className="font-mono text-slate-600">{currentUser?.employeeId}</div>
-        </div>
-      </aside>
-
+      }
+    >
       {/* Active Sub-View Content */}
-      <div className="flex-1 overflow-y-auto">
         {activeSubView === 'assessmentRoll' && (
           <ViewAssessmentRoll onOpenPropertyInFaas={loadRollRowIntoFaas} />
         )}
@@ -806,9 +820,10 @@ export const Screen1Assessor: React.FC = () => {
                   <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-2 text-xs text-blue-950">
                     <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
                     <div>
-                      <strong>Rate Provenance:</strong> Linked to Camarines Sur Provincial Ordinance No. 2024-08 (
-                      <span className="font-mono font-semibold">{SMV_RATES[classification].subclass}</span>). Statutory
-                      assessment level locked at <strong>{assessmentLevel}%</strong> under Section 218, RA 7160.
+                      <strong>Rate Provenance:</strong> Linked to {activeSmvNotice.ref} (
+                      <span className="font-mono font-semibold">{getPrimaryRateInfo(classification).subclass}</span>).
+                      Statutory assessment level locked at <strong>{assessmentLevel}%</strong> under Section 218, RA
+                      7160.
                     </div>
                   </div>
                 </div>
@@ -1340,7 +1355,6 @@ export const Screen1Assessor: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </CollapsibleSidebarLayout>
   );
 };

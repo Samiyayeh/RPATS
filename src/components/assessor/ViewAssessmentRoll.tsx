@@ -4,6 +4,12 @@ import { useRpatis } from '../../context/RpatisContext';
 import { AssessmentRollRow, PropertyClassification } from '../../types/rpatis';
 import { StatusChip } from '../common/StatusChip';
 
+const ROLL_STATUS_ORDER: Record<AssessmentRollRow['paymentStatus'], number> = {
+  Unpaid: 1,
+  Partial: 2,
+  Paid: 3
+};
+
 interface ViewAssessmentRollProps {
   onOpenPropertyInFaas?: (row: AssessmentRollRow) => void;
 }
@@ -13,23 +19,28 @@ export const ViewAssessmentRoll: React.FC<ViewAssessmentRollProps> = ({ onOpenPr
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState<'All' | PropertyClassification>('All');
 
-  const filtered = assessmentRoll.filter((row) => {
-    if (classFilter !== 'All' && row.classification !== classFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      const norm = q.replace(/[-\s]/g, '');
-      return (
-        row.tdNo.toLowerCase().includes(q) ||
-        row.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
-        row.pin.toLowerCase().includes(q) ||
-        row.pin.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
-        row.ownerFull.toLowerCase().includes(q) ||
-        row.ownerMasked.toLowerCase().includes(q) ||
-        row.barangay.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filtered = assessmentRoll
+    .filter((row) => {
+      if (classFilter !== 'All' && row.classification !== classFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const norm = q.replace(/[-\s]/g, '');
+        return (
+          row.tdNo.toLowerCase().includes(q) ||
+          row.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
+          row.pin.toLowerCase().includes(q) ||
+          row.pin.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
+          row.ownerFull.toLowerCase().includes(q) ||
+          row.ownerMasked.toLowerCase().includes(q) ||
+          row.barangay.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = (ROLL_STATUS_ORDER[a.paymentStatus] ?? 99) - (ROLL_STATUS_ORDER[b.paymentStatus] ?? 99);
+      return diff !== 0 ? diff : a.tdNo.localeCompare(b.tdNo, undefined, { numeric: true });
+    });
 
   const totalMarket = assessmentRoll.reduce((sum, r) => sum + r.marketValue, 0);
   const totalAssessed = assessmentRoll.reduce((sum, r) => sum + r.assessedValue, 0);

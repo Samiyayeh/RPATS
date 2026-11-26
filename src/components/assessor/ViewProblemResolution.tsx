@@ -20,7 +20,15 @@ export const ViewProblemResolution: React.FC = () => {
   const [description, setDescription] = useState('');
   const [resubmitNotes, setResubmitNotes] = useState<Record<string, string>>({});
 
-  const flaggedPasacao = dockets.filter((d) => d.lgu === 'Pasacao' && d.status === 'Flagged');
+  const flaggedPasacao = dockets
+    .filter((d) => d.lgu === 'Pasacao' && d.status === 'Flagged')
+    .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+
+  const sortedProblemTickets = [...problemTickets].sort((a, b) => {
+    const oa = a.status === 'Open' ? 1 : 2;
+    const ob = b.status === 'Open' ? 1 : 2;
+    return oa !== ob ? oa - ob : b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
 
   const handleLogTicket = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +217,7 @@ export const ViewProblemResolution: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {problemTickets.map((t) => (
+              {sortedProblemTickets.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
                   <td className="py-3 px-4 whitespace-nowrap">
                     <div className="font-mono font-bold text-slate-900">{t.id}</div>

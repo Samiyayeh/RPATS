@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { Search, ArrowRight, MessageSquare } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
+import { DocketStatus } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+
+const DEFICIENCY_PRIORITY_ORDER: Partial<Record<DocketStatus, number>> = {
+  Flagged: 1,
+  'Under Technical Review': 2,
+  'At Capitol': 2,
+  Approved: 3,
+  Paid: 3
+};
 
 interface DeficiencyTrackerProps {
   onReinspectDocket?: (docketId: string) => void;
@@ -14,18 +23,23 @@ export const Screen4CapitolDeficiencyTracker: React.FC<DeficiencyTrackerProps> =
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>('PAS-2026-0847');
 
-  const flaggedDockets = dockets.filter((d) => {
-    if (d.status !== 'Flagged' && d.deficiencies.length === 0) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        d.id.toLowerCase().includes(q) ||
-        d.lgu.toLowerCase().includes(q) ||
-        d.owner.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const flaggedDockets = dockets
+    .filter((d) => {
+      if (d.status !== 'Flagged' && d.deficiencies.length === 0) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          d.id.toLowerCase().includes(q) ||
+          d.lgu.toLowerCase().includes(q) ||
+          d.owner.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = (DEFICIENCY_PRIORITY_ORDER[a.status] ?? 99) - (DEFICIENCY_PRIORITY_ORDER[b.status] ?? 99);
+      return diff !== 0 ? diff : a.id.localeCompare(b.id, undefined, { numeric: true });
+    });
 
   return (
     <div className="p-5 sm:p-6 space-y-5">

@@ -54,7 +54,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'sm' }) =
   ) {
     styles = 'bg-amber-50 text-amber-950 border-amber-600';
     Icon = Clock;
-  } else if (normalized.includes('cis')) {
+  } else if (normalized.includes('cis') || normalized.includes('sign-off')) {
     styles = 'bg-blue-50 text-blue-950 border-blue-600';
     Icon = ShieldCheck;
   } else if (normalized.includes('cancel')) {

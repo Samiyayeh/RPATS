@@ -1,54 +1,183 @@
-import React, { useState } from 'react';
-import { Receipt, ShieldCheck, AlertTriangle, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Receipt, ShieldCheck, AlertTriangle, X, Search } from 'lucide-react';
 import { AssessmentRollRow } from '../types/rpatis';
 import { useRpatis } from '../context/RpatisContext';
+import { StatusChip } from './common/StatusChip';
+
+const CASHIER_ROLL_STATUS_ORDER: Record<AssessmentRollRow['paymentStatus'], number> = {
+  Unpaid: 1,
+  Partial: 2,
+  Paid: 3
+};
 
 interface CashierProps {
   row: AssessmentRollRow;
   netDue: number;
+  onSelectRow?: (tdNo: string, computedNetDue: number) => void;
   onPaymentSettled?: (orNo: string, clearanceNo: string) => void;
 }
 
 export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
   row,
   netDue,
+  onSelectRow,
   onPaymentSettled
 }) => {
-  const { currentUser, recordTreasuryPayment } = useRpatis();
-  const [payorName, setPayorName] = useState('');
+  const { currentUser, assessmentRoll, recordTreasuryPayment } = useRpatis();
+
+  const collectibleRoll = assessmentRoll.filter((item) => item.paymentStatus !== 'Paid');
+  const displayRow =
+    row.paymentStatus === 'Paid' && collectibleRoll.length > 0 ? collectibleRoll[0] : row;
+  const effectiveNetDue =
+    displayRow.tdNo === row.tdNo ? netDue : Math.round(displayRow.totalTaxDue * 0.9);
+
+  const [payorName, setPayorName] = useState(displayRow.ownerFull);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'LandBank' | 'Check'>('Cash');
   const [tenderedAmount, setTenderedAmount] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  const [rollSearch, setRollSearch] = useState('');
+
+  useEffect(() => {
+    setPayorName(displayRow.ownerFull);
+    setTenderedAmount('');
+  }, [displayRow.tdNo, displayRow.ownerFull]);
+
+  const cleanQuery = rollSearch.trim().toLowerCase();
+  const normQuery = cleanQuery.replace(/[-\s]/g, '');
+
+  const sortedRollMatches = collectibleRoll
+    .filter((item) => {
+      if (!cleanQuery) return true;
+      return (
+        item.tdNo.toLowerCase().includes(cleanQuery) ||
+        item.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(normQuery) ||
+        item.pin.toLowerCase().includes(cleanQuery) ||
+        item.pin.toLowerCase().replace(/[-\s]/g, '').includes(normQuery) ||
+        item.ownerFull.toLowerCase().includes(cleanQuery) ||
+        item.ownerMasked.toLowerCase().includes(cleanQuery) ||
+        item.barangay.toLowerCase().includes(cleanQuery)
+      );
+    })
+    .sort((a, b) => {
+      const diff =
+        (CASHIER_ROLL_STATUS_ORDER[a.paymentStatus] ?? 99) -
+        (CASHIER_ROLL_STATUS_ORDER[b.paymentStatus] ?? 99);
+      return diff !== 0 ? diff : a.tdNo.localeCompare(b.tdNo, undefined, { numeric: true });
+    });
+
   const hasTender = tenderedAmount.trim().length > 0;
   const tenderedNum = hasTender ? Number(tenderedAmount) : 0;
-  const changeDue = tenderedNum - netDue;
-  const isInsufficient = hasTender && tenderedNum < netDue;
-  const canConfirmStep1 = payorName.trim().length > 0 && hasTender && tenderedNum >= netDue;
-  const candidateOrNo = `OR-2026-${String(993841 + Math.floor(row.assessedValue % 90))}`;
-  const candidateClearance = `TC-PAS-2026-0419`;
+  const changeDue = tenderedNum - effectiveNetDue;
+  const isInsufficient = hasTender && tenderedNum < effectiveNetDue;
+  const canConfirmStep1 =
+    payorName.trim().length > 0 && hasTender && tenderedNum >= effectiveNetDue;
+  const tdDigits = displayRow.tdNo.replace(/\D/g, '').slice(-4).padStart(4, '0');
+  const candidateOrNo = `OR-2026-${String(993841 + Math.floor(displayRow.assessedValue % 90))}`;
+  const candidateClearance = `TC-PAS-2026-${tdDigits}`;
 
   const handleFinalConfirm = () => {
     if (!canConfirmStep1) return;
-    recordTreasuryPayment(row.tdNo, payorName.trim(), netDue, candidateOrNo, candidateClearance);
+    recordTreasuryPayment(
+      displayRow.tdNo,
+      payorName.trim(),
+      effectiveNetDue,
+      candidateOrNo,
+      candidateClearance
+    );
     setShowConfirmModal(false);
     onPaymentSettled && onPaymentSettled(candidateOrNo, candidateClearance);
   };
 
   return (
     <div className="p-5 sm:p-6 space-y-5">
-      <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-2xs">
-        <h1 className="text-lg font-bold text-slate-900">
-          Cashier Payment Window #3 • Form 56 Collection
-        </h1>
-        <p className="text-xs text-slate-600 mt-0.5">
-          Two-step financial settlement required before Official Receipt Form 56 and Tax Clearance issuance.
-        </p>
+      <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-mono text-slate-600">
+            Municipal Treasury &gt; Cashier Window #3 &gt; {displayRow.tdNo}
+          </div>
+          <h1 className="text-lg font-bold text-slate-900 mt-0.5">
+            Cashier Payment Window #3 • Form 56 Collection
+          </h1>
+          <p className="text-xs text-slate-600 mt-0.5">
+            Two-step financial settlement required before Official Receipt Form 56 and Tax Clearance issuance.
+          </p>
+        </div>
+        <StatusChip status={displayRow.paymentStatus} size="md" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {/* Left: Payment Entry */}
-        <div className="xl:col-span-7 bg-white rounded-xl border border-slate-300 shadow-2xs p-6 space-y-5">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        {/* Left: Collectible Unpaid / Partial Roll Queue */}
+        <div className="xl:col-span-3 bg-white rounded-xl border border-slate-300 shadow-2xs overflow-hidden">
+          <div className="p-3.5 border-b border-slate-200 bg-slate-50 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Select Account to Settle
+              </h2>
+              <span className="font-mono text-[11px] font-bold text-slate-600">
+                {sortedRollMatches.length}/{collectibleRoll.length}
+              </span>
+            </div>
+
+            <div>
+              <label htmlFor="cashier-roll-search" className="sr-only">
+                Search Unpaid or Partial Assessment Roll
+              </label>
+              <div className="relative">
+                <Search
+                  className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <input
+                  id="cashier-roll-search"
+                  type="text"
+                  value={rollSearch}
+                  onChange={(e) => setRollSearch(e.target.value)}
+                  placeholder="TD No., PIN, Owner..."
+                  className="w-full min-h-[38px] bg-white border border-slate-400 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-slate-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          {sortedRollMatches.length === 0 ? (
+            <div className="p-5 text-center text-xs text-slate-600">
+              No unpaid or partial accounts match your search.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200 max-h-[540px] overflow-y-auto">
+              {sortedRollMatches.map((item) => {
+                const isSelected = item.tdNo === displayRow.tdNo;
+                const q1Due = Math.round(item.totalTaxDue * 0.9);
+                return (
+                  <button
+                    key={item.tdNo}
+                    type="button"
+                    onClick={() => onSelectRow && onSelectRow(item.tdNo, q1Due)}
+                    className={`w-full text-left p-3 transition-colors space-y-1 border-l-4 ${
+                      isSelected
+                        ? 'bg-emerald-50/70 border-l-emerald-800'
+                        : 'bg-white hover:bg-slate-50 border-l-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="font-mono font-bold text-xs text-slate-900">{item.tdNo}</span>
+                      <StatusChip status={item.paymentStatus} />
+                    </div>
+                    <div className="text-xs font-bold text-slate-900 truncate">{item.ownerFull}</div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-600 font-mono">
+                      <span>Brgy. {item.barangay}</span>
+                      <span className="font-bold text-slate-900">₱{q1Due.toLocaleString()}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Center: Payment Entry */}
+        <div className="xl:col-span-5 bg-white rounded-xl border border-slate-300 shadow-2xs p-5 space-y-5">
           <div className="space-y-3 pb-4 border-b border-slate-200">
             <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               1. Settlement Particulars
@@ -69,10 +198,10 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
 
             <div className="p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
               <span className="font-semibold text-slate-800">
-                Full Year 2026 Assessment ({row.tdNo})
+                Full Year 2026 Assessment ({displayRow.tdNo})
               </span>
               <span className="font-mono font-bold text-slate-900 text-sm">
-                ₱{netDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                ₱{effectiveNetDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -88,7 +217,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
                   key={method}
                   type="button"
                   onClick={() => setPaymentMethod(method)}
-                  className={`min-h-[40px] px-4 py-2 text-xs font-bold rounded-lg border ${
+                  className={`min-h-[40px] px-3.5 py-2 text-xs font-bold rounded-lg border ${
                     paymentMethod === method
                       ? 'bg-slate-900 text-white border-slate-900'
                       : 'bg-white text-slate-800 border-slate-400 hover:bg-slate-100'
@@ -105,7 +234,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               <div className="p-3 bg-slate-50 border border-slate-300 rounded-lg">
                 <span className="text-xs font-bold text-slate-600 uppercase block">Net Payable</span>
                 <strong className="text-lg font-extrabold font-mono text-slate-900 block mt-0.5">
-                  ₱{netDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  ₱{effectiveNetDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </strong>
               </div>
 
@@ -141,7 +270,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
             </div>
           </div>
 
-          {/* Step 1 Button (Opens 2-Step Confirmation Modal — Finding [6] & WCAG U-03) */}
+          {/* Step 1 Button */}
           <button
             type="button"
             disabled={!canConfirmStep1}
@@ -153,8 +282,8 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
           </button>
         </div>
 
-        {/* Right: Unsettled Draft Receipt Preview with Prominent Draft Watermark (Finding [7]) */}
-        <div className="xl:col-span-5 bg-white rounded-xl border border-slate-300 shadow-2xs p-6 space-y-4">
+        {/* Right: Unsettled Draft Receipt Preview */}
+        <div className="xl:col-span-4 bg-white rounded-xl border border-slate-300 shadow-2xs p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Form 56 Draft Preview
@@ -165,12 +294,11 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
           </div>
 
           <div className="relative border-2 border-dashed border-amber-500 bg-slate-50 rounded-xl p-5 text-xs font-mono space-y-3 overflow-hidden">
-            {/* Finding [7]: Explicit Draft Watermark so preview cannot be mistaken for an issued receipt */}
             <div
               aria-hidden="true"
               className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
             >
-              <span className="text-2xl font-black text-amber-700/20 -rotate-12 tracking-widest border-4 border-amber-700/20 px-4 py-1 rounded">
+              <span className="text-xl font-black text-amber-700/20 -rotate-12 tracking-widest border-4 border-amber-700/20 px-3 py-1 rounded text-center">
                 DRAFT PREVIEW • NOT SETTLED
               </span>
             </div>
@@ -186,9 +314,9 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               <div>Candidate OR Serial: <strong>{candidateOrNo}</strong></div>
               <div>Date: March 18, 2026</div>
               <div>Payor: <strong className="font-sans">{payorName || 'Pending Entry'}</strong></div>
-              <div>TD No.: <strong>{row.tdNo}</strong> (PIN {row.pin})</div>
+              <div>TD No.: <strong>{displayRow.tdNo}</strong> (PIN {displayRow.pin})</div>
               <div>
-                Net Amount: <strong>₱{netDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>
+                Net Amount: <strong>₱{effectiveNetDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>
               </div>
               <div>Method: {paymentMethod}</div>
             </div>
@@ -201,7 +329,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
         </div>
       </div>
 
-      {/* Step 2: Explicit Financial Confirmation Modal (Finding [6] & WCAG U-03) */}
+      {/* Step 2: Explicit Financial Confirmation Modal */}
       {showConfirmModal && (
         <div
           role="dialog"
@@ -241,7 +369,7 @@ export const Screen3TreasuryCashier: React.FC<CashierProps> = ({
               <div className="flex justify-between">
                 <span className="text-slate-600">Net Tax Settled:</span>
                 <strong className="font-mono text-slate-900">
-                  ₱{netDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  ₱{effectiveNetDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </strong>
               </div>
               <div className="flex justify-between">

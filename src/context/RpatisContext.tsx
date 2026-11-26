@@ -8,6 +8,9 @@ import {
   LienAnnotationRecord,
   OcularInspectionRequest,
   OfficeRole,
+  PropertyClassification,
+  SmvNoticeRevision,
+  SmvRateEntry,
   SyncToast,
   UserPersona
 } from '../types/rpatis';
@@ -34,6 +37,7 @@ interface RpatisContextType {
   // Inter-Office Actions
   createOrUpdateDocket: (docket: AssessmentDocket) => void;
   endorseDocketsToCapitol: (docketIds: string[]) => void;
+  forwardDocketToSignoff: (docketId: string) => void;
   flagDocketDeficiency: (docketId: string, reason: string) => void;
   approveAndIssueCis: (docketId: string, sha256Hash: string, cisSerial: string) => void;
   recordTreasuryPayment: (
@@ -50,6 +54,9 @@ interface RpatisContextType {
   ocularRequests: OcularInspectionRequest[];
   problemTickets: AssessmentProblemTicket[];
   legacyRecords: LegacyArchiveRecord[];
+  smvRates: SmvRateEntry[];
+  activeSmvNotice: { ref: string; effectiveDate: string };
+  smvRevisions: SmvNoticeRevision[];
   issueCertification: (cert: Omit<CertificationRequest, 'id' | 'issuedAt' | 'status'>) => CertificationRequest;
   recordLienAnnotation: (lien: Omit<LienAnnotationRecord, 'id' | 'recordedAt' | 'status'>) => void;
   scheduleOcularInspection: (req: Omit<OcularInspectionRequest, 'id' | 'status'>) => void;
@@ -59,6 +66,18 @@ interface RpatisContextType {
   resubmitFlaggedDocket: (docketId: string, correctiveNote: string) => void;
   addLegacyRecord: (rec: Omit<LegacyArchiveRecord, 'id'>) => LegacyArchiveRecord;
   migrateLegacyToModern: (legacyId: string, docket: AssessmentDocket) => void;
+  updateSmvFromNotice: (payload: {
+    targetId?: string;
+    category: PropertyClassification;
+    subclass: string;
+    description: string;
+    zones: string;
+    rate: number;
+    level: number;
+    noticeRef: string;
+    effectiveDate: string;
+    remarks: string;
+  }) => void;
 
   // Accessible Live Notifications (WCAG R-02 aria-live="polite")
   toasts: SyncToast[];
@@ -158,6 +177,60 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       modernDraftTarget: 'PAS-2026-0850 • Caranan Fishing Corp. (Lot 3891-C, 320 sqm)'
     }
   ]);
+
+  const [smvRates, setSmvRates] = useState<SmvRateEntry[]>([
+    {
+      id: 'SMV-R1',
+      category: 'Residential',
+      subclass: 'R-1 (Residential First Class)',
+      description: 'Paved concrete road frontage, complete water & power access',
+      zones: 'Poblacion, Sta. Rosa del Sur, Balogo, Odicon',
+      rate: 1200,
+      level: 20,
+      ordinanceRef: 'Provincial Ordinance No. 2024-08',
+      effectiveDate: '2024-01-01'
+    },
+    {
+      id: 'SMV-R2',
+      category: 'Residential',
+      subclass: 'R-2 (Residential Second Class)',
+      description: 'Gravel road, interior access within 500m of main highway',
+      zones: 'Macad, San Roque, Dalupaon',
+      rate: 1000,
+      level: 20,
+      ordinanceRef: 'Provincial Ordinance No. 2024-08',
+      effectiveDate: '2024-01-01'
+    },
+    {
+      id: 'SMV-AG1',
+      category: 'Agricultural',
+      subclass: 'Ag-1 (Irrigated Riceland / Coconut)',
+      description: 'Productive agricultural land under Section 218 RA 7160',
+      zones: 'Caranan, Tinalmud, Itulan',
+      rate: 85,
+      level: 40,
+      ordinanceRef: 'Provincial Ordinance No. 2024-08',
+      effectiveDate: '2024-01-01'
+    },
+    {
+      id: 'SMV-C1',
+      category: 'Commercial',
+      subclass: 'C-1 (Commercial First Class)',
+      description: 'Primary commercial strip and municipal market perimeter',
+      zones: 'Dalupaon Highway, Cuco, Poblacion Market',
+      rate: 2500,
+      level: 50,
+      ordinanceRef: 'Provincial Ordinance No. 2024-08',
+      effectiveDate: '2024-01-01'
+    }
+  ]);
+
+  const [activeSmvNotice, setActiveSmvNotice] = useState<{ ref: string; effectiveDate: string }>({
+    ref: 'Camarines Sur Provincial Ordinance No. 2024-08',
+    effectiveDate: '2024-01-01'
+  });
+
+  const [smvRevisions, setSmvRevisions] = useState<SmvNoticeRevision[]>([]);
 
   const pushToast = (
     title: string,
@@ -268,6 +341,17 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  const forwardDocketToSignoff = (docketId: string) => {
+    setDockets((prev) =>
+      prev.map((d) => (d.id === docketId ? { ...d, status: 'Ready for Sign-Off' } : d))
+    );
+    pushToast(
+      'Forwarded for CIS Sign-Off',
+      `Docket ${docketId} marked Ready for Sign-Off and queued for the Provincial Assessor.`,
+      'info'
+    );
+  };
+
   const flagDocketDeficiency = (docketId: string, reason: string) => {
     const newNote = {
       id: `DEF-${Date.now()}`,
@@ -296,24 +380,21 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const approveAndIssueCis = (docketId: string, sha256Hash: string, cisSerial: string) => {
-    let approvedDocket: AssessmentDocket | undefined;
+    const target = dockets.find((d) => d.id === docketId);
     setDockets((prev) =>
-      prev.map((d) => {
-        if (d.id === docketId) {
-          approvedDocket = {
-            ...d,
-            status: 'Approved',
-            cisSerial,
-            cisHash: sha256Hash
-          };
-          return approvedDocket;
-        }
-        return d;
-      })
+      prev.map((d) =>
+        d.id === docketId
+          ? {
+              ...d,
+              status: 'Approved',
+              cisSerial,
+              cisHash: sha256Hash
+            }
+          : d
+      )
     );
 
-    if (approvedDocket) {
-      const target = approvedDocket;
+    if (target) {
       setAssessmentRoll((prev) => {
         const exists = prev.some((r) => r.tdNo === target.tdNo || r.pin === target.pin);
         const basicRpt = Math.round(target.assessedValue * 0.01);
@@ -323,7 +404,7 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           pin: target.pin,
           ownerMasked: target.ownerMasked,
           ownerFull: target.owner,
-          barangay: target.barangay.replace('Brgy. ', '').replace(', Pasacao', ''),
+          barangay: target.barangay.replace(/^Brgy\.\s*/i, '').replace(/,\s*Pasacao$/i, ''),
           classification: target.classification,
           areaSqm: target.areaSqm,
           unitValue: target.unitValue,
@@ -554,6 +635,77 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  const updateSmvFromNotice = (payload: {
+    targetId?: string;
+    category: PropertyClassification;
+    subclass: string;
+    description: string;
+    zones: string;
+    rate: number;
+    level: number;
+    noticeRef: string;
+    effectiveDate: string;
+    remarks: string;
+  }) => {
+    const existing = payload.targetId ? smvRates.find((r) => r.id === payload.targetId) : undefined;
+    const revEntry: SmvNoticeRevision = {
+      id: `SMV-REV-${Date.now()}`,
+      noticeRef: payload.noticeRef.trim(),
+      effectiveDate: payload.effectiveDate,
+      action: existing ? 'Rate Revised' : 'Sub-Class Added',
+      subclass: existing ? existing.subclass : payload.subclass.trim(),
+      previousRate: existing ? existing.rate : undefined,
+      newRate: payload.rate,
+      newLevel: payload.level,
+      remarks: payload.remarks.trim() || 'Updated per Provincial Assessor SMV notice.',
+      updatedBy: currentUser?.name || 'Municipal Assessor Office',
+      updatedAt: 'March 18, 2026 • Just now'
+    };
+
+    if (existing) {
+      setSmvRates((prev) =>
+        prev.map((r) =>
+          r.id === existing.id
+            ? {
+                ...r,
+                rate: payload.rate,
+                level: payload.level,
+                zones: payload.zones.trim() || r.zones,
+                description: payload.description.trim() || r.description,
+                ordinanceRef: payload.noticeRef.trim(),
+                effectiveDate: payload.effectiveDate
+              }
+            : r
+        )
+      );
+    } else {
+      const created: SmvRateEntry = {
+        id: `SMV-${Date.now()}`,
+        category: payload.category,
+        subclass: payload.subclass.trim(),
+        description: payload.description.trim() || 'Added under Provincial SMV Notice',
+        zones: payload.zones.trim() || 'Pasacao Municipal Jurisdiction',
+        rate: payload.rate,
+        level: payload.level,
+        ordinanceRef: payload.noticeRef.trim(),
+        effectiveDate: payload.effectiveDate
+      };
+      setSmvRates((prev) => [...prev, created]);
+    }
+
+    setActiveSmvNotice({
+      ref: payload.noticeRef.trim(),
+      effectiveDate: payload.effectiveDate
+    });
+    setSmvRevisions((prev) => [revEntry, ...prev]);
+
+    pushToast(
+      'SMV Schedule Updated by Notice',
+      `${revEntry.subclass} set to ₱${payload.rate.toLocaleString('en-PH')}/sqm (${payload.level}%) under ${payload.noticeRef.trim()}.`,
+      'success'
+    );
+  };
+
   return (
     <RpatisContext.Provider
       value={{
@@ -568,6 +720,7 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setActiveDocketId,
         createOrUpdateDocket,
         endorseDocketsToCapitol,
+        forwardDocketToSignoff,
         flagDocketDeficiency,
         approveAndIssueCis,
         recordTreasuryPayment,
@@ -576,6 +729,9 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ocularRequests,
         problemTickets,
         legacyRecords,
+        smvRates,
+        activeSmvNotice,
+        smvRevisions,
         issueCertification,
         recordLienAnnotation,
         scheduleOcularInspection,
@@ -585,6 +741,7 @@ export const RpatisProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         resubmitFlaggedDocket,
         addLegacyRecord,
         migrateLegacyToModern,
+        updateSmvFromNotice,
         toasts,
         pushToast,
         dismissToast

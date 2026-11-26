@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
+import { DocketStatus } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+
+const CAPITOL_STATUS_ORDER: Record<DocketStatus, number> = {
+  'Under Technical Review': 1,
+  'At Capitol': 2,
+  'Ready for Sign-Off': 3,
+  Flagged: 4,
+  'Needs Signature': 5,
+  Draft: 6,
+  Approved: 7,
+  Paid: 8
+};
 
 interface MasterQueueProps {
   onSelectDocket?: (docketId: string) => void;
@@ -12,19 +24,24 @@ export const Screen2CapitolMasterQueue: React.FC<MasterQueueProps> = ({ onSelect
   const [lguFilter, setLguFilter] = useState<'All' | 'Pasacao' | 'Canaman'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filtered = dockets.filter((d) => {
-    if (lguFilter !== 'All' && d.lgu !== lguFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        d.id.toLowerCase().includes(q) ||
-        d.capitolId.toLowerCase().includes(q) ||
-        d.pin.toLowerCase().includes(q) ||
-        d.owner.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filtered = dockets
+    .filter((d) => {
+      if (lguFilter !== 'All' && d.lgu !== lguFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          d.id.toLowerCase().includes(q) ||
+          d.capitolId.toLowerCase().includes(q) ||
+          d.pin.toLowerCase().includes(q) ||
+          d.owner.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = (CAPITOL_STATUS_ORDER[a.status] ?? 99) - (CAPITOL_STATUS_ORDER[b.status] ?? 99);
+      return diff !== 0 ? diff : a.capitolId.localeCompare(b.capitolId, undefined, { numeric: true });
+    });
 
   const pasacaoCount = dockets.filter((d) => d.lgu === 'Pasacao').length;
   const canamanCount = dockets.filter((d) => d.lgu === 'Canaman').length;

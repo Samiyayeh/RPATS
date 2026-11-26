@@ -40,16 +40,18 @@ export const ViewLegacyVault: React.FC<ViewLegacyVaultProps> = ({ onMigrateToDra
   const [newAreaSqm, setNewAreaSqm] = useState('');
   const [newUnitValue, setNewUnitValue] = useState('');
 
-  const filtered = legacyRecords.filter((r) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      r.vintageTd.toLowerCase().includes(q) ||
-      r.owner.toLowerCase().includes(q) ||
-      r.lot.toLowerCase().includes(q) ||
-      r.revision.toLowerCase().includes(q)
-    );
-  });
+  const filtered = legacyRecords
+    .filter((r) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        r.vintageTd.toLowerCase().includes(q) ||
+        r.owner.toLowerCase().includes(q) ||
+        r.lot.toLowerCase().includes(q) ||
+        r.revision.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => a.vintageTd.localeCompare(b.vintageTd, undefined, { numeric: true }));
 
   const activeRecord =
     legacyRecords.find((r) => r.id === selectedId) || filtered[0] || legacyRecords[0];

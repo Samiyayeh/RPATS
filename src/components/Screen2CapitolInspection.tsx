@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
-import { ZoomIn, ZoomOut, AlertTriangle, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ZoomIn, ZoomOut, AlertTriangle, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
+import { DocketStatus } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+
+const CAPITOL_INSPECTION_ORDER: Record<DocketStatus, number> = {
+  'Under Technical Review': 1,
+  'At Capitol': 2,
+  'Ready for Sign-Off': 3,
+  Flagged: 4,
+  'Needs Signature': 5,
+  Draft: 6,
+  Approved: 7,
+  Paid: 8
+};
 
 interface Screen2InspectionProps {
   onForwardToSignoff?: () => void;
@@ -12,8 +24,17 @@ export const Screen2CapitolInspection: React.FC<Screen2InspectionProps> = ({
   onForwardToSignoff,
   onOpenFlagModal
 }) => {
-  const { dockets, activeDocketId } = useRpatis();
-  const activeDocket = dockets.find((d) => d.id === activeDocketId) || dockets[0];
+  const { dockets, activeDocketId, setActiveDocketId, forwardDocketToSignoff } = useRpatis();
+
+  const sortedDockets = [...dockets].sort((a, b) => {
+    const diff =
+      (CAPITOL_INSPECTION_ORDER[a.status] ?? 99) - (CAPITOL_INSPECTION_ORDER[b.status] ?? 99);
+    return diff !== 0 ? diff : a.capitolId.localeCompare(b.capitolId, undefined, { numeric: true });
+  });
+
+  const activeDocket =
+    sortedDockets.find((d) => d.id === activeDocketId) || sortedDockets[0];
+  const activeIndex = sortedDockets.findIndex((d) => d.id === activeDocket.id);
 
   const [activeDocTab, setActiveDocTab] = useState<'survey' | 'deed' | 'ecar' | 'faas'>('survey');
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -23,45 +44,108 @@ export const Screen2CapitolInspection: React.FC<Screen2InspectionProps> = ({
   const [birEcarCheck, setBirEcarCheck] = useState(false);
   const [noteText, setNoteText] = useState('');
 
+  useEffect(() => {
+    setSmvCheck(false);
+    setBoundaryCheck(false);
+    setTaxClearanceCheck(false);
+    setBirEcarCheck(false);
+    setNoteText('');
+  }, [activeDocket.id]);
+
   const hasUnresolvedBlocker =
     !smvCheck || !boundaryCheck || !taxClearanceCheck || !birEcarCheck || activeDocket.status === 'Flagged';
 
   return (
     <div className="p-5 sm:p-6 space-y-5">
-      {/* Top Docket Banner */}
-      <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-base font-bold text-slate-900 font-mono">
-              Inspection Docket #{activeDocket.capitolId}
-            </h1>
-            <StatusChip status={activeDocket.status} />
+      {/* Top Docket Banner + Queued Docket Selector */}
+      <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-2xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base font-bold text-slate-900 font-mono">
+                Inspection Docket #{activeDocket.capitolId}
+              </h1>
+              <StatusChip status={activeDocket.status} />
+            </div>
+            <p className="text-xs text-slate-700 mt-1">
+              LGU {activeDocket.lgu} Endorsement • Declarant: <strong>{activeDocket.owner}</strong> • PIN{' '}
+              <span className="font-mono font-semibold">{activeDocket.pin}</span>
+            </p>
           </div>
-          <p className="text-xs text-slate-700 mt-1">
-            LGU {activeDocket.lgu} Endorsement • Declarant: <strong>{activeDocket.owner}</strong> • PIN{' '}
-            <span className="font-mono font-semibold">{activeDocket.pin}</span>
-          </p>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onOpenFlagModal}
+              className="min-h-[42px] px-3.5 py-2 border-2 border-red-600 text-red-800 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-bold flex items-center gap-1.5"
+            >
+              <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+              <span>Flag Discrepancy</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={hasUnresolvedBlocker}
+              onClick={() => {
+                forwardDocketToSignoff(activeDocket.id);
+                onForwardToSignoff?.();
+              }}
+              className="min-h-[42px] px-4 py-2 bg-indigo-900 hover:bg-indigo-950 disabled:bg-slate-300 disabled:text-slate-600 text-white text-xs font-bold rounded-lg flex items-center gap-2"
+            >
+              <span>Forward to Provincial Assessor Sign-Off</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onOpenFlagModal}
-            className="min-h-[42px] px-3.5 py-2 border-2 border-red-600 text-red-800 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-bold flex items-center gap-1.5"
-          >
-            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-            <span>Flag Discrepancy</span>
-          </button>
+        {/* Inline Queued Docket Switcher */}
+        <div className="pt-3 border-t border-slate-200 flex flex-wrap items-end justify-between gap-3">
+          <div className="flex-1 min-w-[260px]">
+            <label
+              htmlFor="inspection-docket-select"
+              className="block text-xs font-bold text-slate-700 mb-1"
+            >
+              Select Queued Docket ({activeIndex + 1} of {sortedDockets.length})
+            </label>
+            <select
+              id="inspection-docket-select"
+              value={activeDocket.id}
+              onChange={(e) => setActiveDocketId(e.target.value)}
+              className="w-full min-h-[40px] bg-slate-50 border border-slate-400 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900"
+            >
+              {sortedDockets.map((d) => (
+                <option key={d.id} value={d.id}>
+                  [{d.status}] {d.capitolId} — {d.owner} (LGU {d.lgu})
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <button
-            type="button"
-            disabled={hasUnresolvedBlocker}
-            onClick={onForwardToSignoff}
-            className="min-h-[42px] px-4 py-2 bg-indigo-900 hover:bg-indigo-950 disabled:bg-slate-300 disabled:text-slate-600 text-white text-xs font-bold rounded-lg flex items-center gap-2"
-          >
-            <span>Forward to Provincial Assessor Sign-Off</span>
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              aria-label="Previous queued docket"
+              disabled={activeIndex <= 0}
+              onClick={() => activeIndex > 0 && setActiveDocketId(sortedDockets[activeIndex - 1].id)}
+              className="min-h-[40px] px-3 py-1.5 border border-slate-400 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white rounded-lg text-xs font-bold text-slate-800 inline-flex items-center gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+              <span>Prev</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Next queued docket"
+              disabled={activeIndex >= sortedDockets.length - 1}
+              onClick={() =>
+                activeIndex < sortedDockets.length - 1 &&
+                setActiveDocketId(sortedDockets[activeIndex + 1].id)
+              }
+              className="min-h-[40px] px-3 py-1.5 border border-slate-400 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white rounded-lg text-xs font-bold text-slate-800 inline-flex items-center gap-1"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
 

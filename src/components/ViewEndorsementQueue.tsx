@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { Send, Search, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
+import { DocketStatus } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+
+const STATUS_SORT_ORDER: Record<DocketStatus, number> = {
+  'Needs Signature': 1,
+  Flagged: 2,
+  'At Capitol': 3,
+  'Under Technical Review': 4,
+  'Ready for Sign-Off': 5,
+  Approved: 6,
+  Paid: 7,
+  Draft: 8
+};
 
 export const ViewEndorsementQueue: React.FC = () => {
   const { dockets, endorseDocketsToCapitol } = useRpatis();
@@ -13,19 +25,24 @@ export const ViewEndorsementQueue: React.FC = () => {
 
   const pasacaoDockets = dockets.filter((d) => d.lgu === 'Pasacao');
 
-  const filteredDockets = pasacaoDockets.filter((d) => {
-    if (activeTab !== 'All' && d.status !== activeTab) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        d.id.toLowerCase().includes(q) ||
-        d.pin.toLowerCase().includes(q) ||
-        d.owner.toLowerCase().includes(q) ||
-        d.tdNo.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filteredDockets = pasacaoDockets
+    .filter((d) => {
+      if (activeTab !== 'All' && d.status !== activeTab) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          d.id.toLowerCase().includes(q) ||
+          d.pin.toLowerCase().includes(q) ||
+          d.owner.toLowerCase().includes(q) ||
+          d.tdNo.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = (STATUS_SORT_ORDER[a.status] ?? 99) - (STATUS_SORT_ORDER[b.status] ?? 99);
+      return diff !== 0 ? diff : a.id.localeCompare(b.id, undefined, { numeric: true });
+    });
 
   const eligibleSelected = selectedIds.filter((id) => {
     const doc = pasacaoDockets.find((d) => d.id === id);

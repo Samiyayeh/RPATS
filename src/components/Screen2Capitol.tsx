@@ -13,6 +13,14 @@ import { Screen2CapitolMasterQueue } from './Screen2CapitolMasterQueue';
 import { Screen2CapitolInspection } from './Screen2CapitolInspection';
 import { Screen3CapitolSignoff } from './Screen3CapitolSignoff';
 import { Screen4CapitolDeficiencyTracker } from './Screen4CapitolDeficiencyTracker';
+import { CollapsibleSidebarLayout } from './layout/CollapsibleSidebarLayout';
+
+const CAPITOL_VIEW_LABELS: Record<'queue' | 'inspection' | 'signoff' | 'deficiencies', string> = {
+  queue: 'Master Review Queue',
+  inspection: 'Dual-Pane Inspection',
+  signoff: 'CIS Sign-Off & Seal',
+  deficiencies: 'Correction Recovery'
+};
 
 export const Screen2Capitol: React.FC = () => {
   const { currentUser, dockets, activeDocketId, setActiveDocketId, flagDocketDeficiency } = useRpatis();
@@ -26,6 +34,7 @@ export const Screen2Capitol: React.FC = () => {
 
   const activeDocket = dockets.find((d) => d.id === activeDocketId) || dockets[0];
   const flaggedCount = dockets.filter((d) => d.status === 'Flagged').length;
+  const signoffCount = dockets.filter((d) => d.status === 'Ready for Sign-Off').length;
   const reviewCount = dockets.filter(
     (d) => d.status === 'Under Technical Review' || d.status === 'At Capitol'
   ).length;
@@ -50,22 +59,12 @@ export const Screen2Capitol: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 w-full bg-slate-50 text-slate-900">
-      {/* Provincial Capitol Sidebar */}
-      <aside
-        aria-label="Provincial Capitol Navigation"
-        className="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-300 flex flex-col justify-between shrink-0"
-      >
-        <div className="p-4 space-y-4">
-          <div className="pb-3 border-b border-slate-200">
-            <div className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-              Provincial Capitol (Pili)
-            </div>
-            <div className="text-xs text-slate-600 mt-0.5 font-medium">
-              35-LGU Statutory Review Pipeline
-            </div>
-          </div>
-
+    <>
+      <CollapsibleSidebarLayout
+        ariaLabel="Provincial Capitol Navigation"
+        sidebarSubtitle="Pili Capitol • 35-LGU Review Pipeline"
+        activeSectionLabel={CAPITOL_VIEW_LABELS[activeMenu]}
+        sidebarContent={
           <nav className="space-y-1.5">
             <button
               type="button"
@@ -107,14 +106,27 @@ export const Screen2Capitol: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveMenu('signoff')}
-              className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-lg transition-colors ${
+              className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 text-xs font-bold rounded-lg transition-colors ${
                 activeMenu === 'signoff'
                   ? 'bg-indigo-900 text-white shadow-2xs'
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <Stamp className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>CIS Sign-Off &amp; Seal</span>
+              <span className="flex items-center gap-2.5">
+                <Stamp className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>CIS Sign-Off &amp; Seal</span>
+              </span>
+              {signoffCount > 0 && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-mono ${
+                    activeMenu === 'signoff'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-blue-100 text-blue-950 border border-blue-400'
+                  }`}
+                >
+                  {signoffCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -141,17 +153,8 @@ export const Screen2Capitol: React.FC = () => {
               </span>
             </button>
           </nav>
-        </div>
-
-        <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-900">Acting Capitol Role</div>
-          <div>{currentUser?.name}</div>
-          <div className="font-mono text-slate-600">{currentUser?.title}</div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+        }
+      >
         {activeMenu === 'queue' && (
           <Screen2CapitolMasterQueue
             onSelectDocket={(id) => {
@@ -180,7 +183,7 @@ export const Screen2Capitol: React.FC = () => {
             }}
           />
         )}
-      </div>
+      </CollapsibleSidebarLayout>
 
       {/* Deficiency Return Modal */}
       {showDeficiencyModal && (
@@ -265,6 +268,6 @@ export const Screen2Capitol: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

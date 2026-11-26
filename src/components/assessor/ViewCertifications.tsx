@@ -29,6 +29,11 @@ export const ViewCertifications: React.FC = () => {
   );
 
   const selectedRow = assessmentRoll.find((r) => r.tdNo === selectedTd);
+  const sortedCertifications = [...certifications].sort((a, b) => {
+    const oa = a.status === 'Pending Fee' ? 1 : 2;
+    const ob = b.status === 'Pending Fee' ? 1 : 2;
+    return oa !== ob ? oa - ob : b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
   const isNoProperty = certType === 'Certificate of No Property';
   const feeNum = Number(feeAmount) || 0;
   const canIssue =
@@ -282,19 +287,13 @@ export const ViewCertifications: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-4">
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-start gap-4">
                 <AuthenticQrCode
                   payload={`RPAT-IOSS|CERT:${previewCert.id}|OR:${previewCert.treasuryOrNo}|TD:${previewCert.tdNo}`}
                   size={72}
                   label="Certification Verification QR"
                   verified={true}
                 />
-                <div className="text-right text-xs">
-                  <div className="font-bold text-slate-900 border-b border-slate-900 pb-1">
-                    RAMON S. ALCANTARA
-                  </div>
-                  <div className="text-slate-600 mt-1">Municipal Assessor, Pasacao</div>
-                </div>
               </div>
             </div>
           )}
@@ -314,7 +313,7 @@ export const ViewCertifications: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {certifications.map((c) => (
+                {sortedCertifications.map((c) => (
                   <tr
                     key={c.id}
                     onClick={() => setPreviewCert(c)}

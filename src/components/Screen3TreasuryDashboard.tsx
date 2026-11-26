@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { Search, Calendar, Sparkles, ArrowRight } from 'lucide-react';
 import { useRpatis } from '../context/RpatisContext';
+import { AssessmentRollRow } from '../types/rpatis';
 import { StatusChip } from './common/StatusChip';
+
+const PAYMENT_PRIORITY_ORDER: Record<AssessmentRollRow['paymentStatus'], number> = {
+  Unpaid: 1,
+  Partial: 2,
+  Paid: 3
+};
 
 interface TreasuryDashboardProps {
   onSelectRow?: (tdNo: string) => void;
@@ -13,19 +20,26 @@ export const Screen3TreasuryDashboard: React.FC<TreasuryDashboardProps> = ({ onS
 
   const cleanQuery = searchQuery.trim().toLowerCase();
 
-  // Postel's Law: Tolerates spaces/hyphens in TD/PIN searches
-  const filteredRows = assessmentRoll.filter((row) => {
-    if (!cleanQuery) return true;
-    const norm = cleanQuery.replace(/[-\s]/g, '');
-    return (
-      row.tdNo.toLowerCase().includes(cleanQuery) ||
-      row.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
-      row.pin.toLowerCase().includes(cleanQuery) ||
-      row.pin.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
-      row.ownerFull.toLowerCase().includes(cleanQuery) ||
-      row.barangay.toLowerCase().includes(cleanQuery)
-    );
-  });
+  // Postel's Law: Tolerates spaces/hyphens in TD/PIN searches; sorts Unpaid -> Partial -> Paid
+  const filteredRows = assessmentRoll
+    .filter((row) => {
+      if (!cleanQuery) return true;
+      const norm = cleanQuery.replace(/[-\s]/g, '');
+      return (
+        row.tdNo.toLowerCase().includes(cleanQuery) ||
+        row.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
+        row.pin.toLowerCase().includes(cleanQuery) ||
+        row.pin.toLowerCase().replace(/[-\s]/g, '').includes(norm) ||
+        row.ownerFull.toLowerCase().includes(cleanQuery) ||
+        row.barangay.toLowerCase().includes(cleanQuery)
+      );
+    })
+    .sort((a, b) => {
+      const diff =
+        (PAYMENT_PRIORITY_ORDER[a.paymentStatus] ?? 99) -
+        (PAYMENT_PRIORITY_ORDER[b.paymentStatus] ?? 99);
+      return diff !== 0 ? diff : a.tdNo.localeCompare(b.tdNo, undefined, { numeric: true });
+    });
 
   // WCAG U-01 Smart Fuzzy Error Recovery (Documented TD-26-0080 -> TD-26-0008 typo from Treasurer_Collections.tsv)
   const fuzzySuggestion =

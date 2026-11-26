@@ -7,6 +7,30 @@
 
 ---
 
+## Quick Links — Design Handoff & Documentation
+
+### Design Handoff & Prototypes
+- **Figma Make (Initial Design):** https://www.figma.com/make/rjQXdZGV2ZJIWtn86lrDV2/grp-23?t=2YzsOQKRN9zg45iT-20&fullscreen=1
+- **Figma Prototype (Group 23):** https://www.figma.com/proto/1vDr5ctzmgqD0IavesfV2W/GRP-23---FIGMA-PROTOTYPE?node-id=44-3&t=xoRO1PbruEWvmQSb-1&scaling=scale-down-width&content-scaling=fixed&page-id=44%3A2&starting-point-node-id=44%3A3&show-proto-sidebar=1
+- **Wireframes (PDF):** [WIREFRAME.pdf](Document/HCI/WIREFRAME.pdf)
+
+### HCI & Research Documentation (`Document/`)
+- **ISO 9241-210 Terminal Case Study:** [GRP23_Case Study(ISO 9241-210).docx](Document/HCI/GRP23_Case%20Study%28ISO%209241-210%29.docx)
+- **WCAG 2.2 Accessibility & UX Case Study:** [GRP23_Accessibility_UX_Case_Study_WCAG2.2.pdf](Document/HCI/Accessibility%20UX%20Case%20Study/GRP23_Accessibility_UX_Case_Study_WCAG2.2.pdf)
+- **WCAG 2.2 Audit Checklist:** [WCAG 2.2 CHECKLIST.pdf](Document/HCI/Accessibility%20UX%20Case%20Study/WCAG%202.2%20CHECKLIST.pdf)
+- **Case Study & UX Laws Evaluation:** [GROUP 23_Case Study & UX Laws Evaluation.pdf](Document/HCI/Accessibility%20UX%20Case%20Study/GROUP%2023_Case%20Study%20%26%20UX%20Laws%20Evaluation.pdf)
+- **26 Expert Design Findings & Recommendations:** [Design_recomendation.pdf](Document/HCI/Accessibility%20UX%20Case%20Study/Design_recomendation.pdf)
+- **Accessibility UX Slide Deck:** [GRP23_Figma_Slide_Deck_Accessibility_UX_Case_Study.pdf](Document/HCI/Accessibility%20UX%20Case%20Study/GRP23_Figma_Slide_Deck_Accessibility_UX_Case_Study.pdf)
+- **Baseline Google Sheets Study & Dataset:** [Case_Study_GoogleSheets_ISO_9241-210.docx](Document/HCI/Case%20Study%20%28ISO%209241-210%29/Case_Study_GoogleSheets_ISO_9241-210.docx) · [Professional_eRPT_Spreadsheet_System.xlsx](Document/HCI/Case%20Study%20%28ISO%209241-210%29/Professional_eRPT_Spreadsheet_System.xlsx)
+- **RPATIS Presentation & SRS:** [GRP 23 - RPATIS- CAMRINES SUR.pdf](Document/HCI/DOCUMENT%20SUB/GRP%2023%20-%20RPATIS-%20CAMRINES%20SUR.pdf) · [GRP 23 - RPATIS- CAMRINES SUR.pptx](Document/HCI/DOCUMENT%20SUB/GRP%2023%20-%20RPATIS-%20CAMRINES%20SUR.pptx) · [TEMPLATE - SYSTEM REQUIREMENTS SPECIFICATION.pdf](Document/HCI/DOCUMENT%20SUB/TEMPLATE%20-%20SYSTEM%20REQUIREMENTS%20SPECIFICATION.pdf)
+- **Citizen's Charter 11 Frontline Services Reference:** [Document/ServicesDocu/](Document/ServicesDocu/)
+
+### Engineering & Prompt Documentation
+- **Backend Architecture Plan (Node.js + Express + MySQL):** [BACKEND_PLAN.md](BACKEND_PLAN.md)
+- **AI Prompt Documentation:** [prompducumentaion.md](prompducumentaion.md)
+
+---
+
 ## 1. Project Overview & Problem Statement
 
 In Local Government Units (LGUs) across Camarines Sur—empirically benchmarked at the **Municipality of Pasacao**—Real Property Tax (RPT) administration under **Republic Act 7160** suffers from severe human-centered workflow bottlenecks:

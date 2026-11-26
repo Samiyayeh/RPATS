@@ -31,6 +31,7 @@ export type DocketStatus =
   | 'Needs Signature'
   | 'At Capitol'
   | 'Under Technical Review'
+  | 'Ready for Sign-Off'
   | 'Flagged'
   | 'Approved'
   | 'Paid';
@@ -203,5 +204,31 @@ export interface LegacyArchiveRecord {
   location: string;
   transcription: string;
   modernDraftTarget?: string;
+}
+
+export interface SmvRateEntry {
+  id: string;
+  category: PropertyClassification;
+  subclass: string;
+  description: string;
+  zones: string;
+  rate: number;
+  level: number;
+  ordinanceRef: string;
+  effectiveDate: string;
+}
+
+export interface SmvNoticeRevision {
+  id: string;
+  noticeRef: string;
+  effectiveDate: string;
+  action: 'Rate Revised' | 'Sub-Class Added';
+  subclass: string;
+  previousRate?: number;
+  newRate: number;
+  newLevel: number;
+  remarks: string;
+  updatedBy: string;
+  updatedAt: string;
 }
 

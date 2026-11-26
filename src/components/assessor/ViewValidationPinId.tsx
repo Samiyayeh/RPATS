@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Hash, MapPin, CheckCircle2, AlertTriangle, Calendar } from 'lucide-react';
+import { ShieldCheck, Hash, MapPin, CheckCircle2, AlertTriangle, Calendar, Search } from 'lucide-react';
 import { useRpatis } from '../../context/RpatisContext';
+import { AssessmentRollRow } from '../../types/rpatis';
 import { StatusChip } from '../common/StatusChip';
 
 export const ViewValidationPinId: React.FC = () => {
@@ -8,9 +9,10 @@ export const ViewValidationPinId: React.FC = () => {
     useRpatis();
   const [subTab, setSubTab] = useState<'validation' | 'pin' | 'ocular'>('validation');
 
-  // Service 1: TD Validation
+  // Service 1: TD Validation (by TD No., PIN, or Owner Name)
   const [validateTdInput, setValidateTdInput] = useState('');
   const [letterRequestRef, setLetterRequestRef] = useState('');
+  const [multiMatchPrompt, setMultiMatchPrompt] = useState(false);
   const [validatedResult, setValidatedResult] = useState<{
     found: boolean;
     tdNo: string;
@@ -18,7 +20,41 @@ export const ViewValidationPinId: React.FC = () => {
     pin?: string;
     barangay?: string;
     assessedValue?: number;
+    letterRef?: string;
   } | null>(null);
+
+  const cleanValidationQuery = validateTdInput.trim().toLowerCase();
+  const normValidationQuery = cleanValidationQuery.replace(/[-\s]/g, '');
+  const validationMatches = cleanValidationQuery
+    ? assessmentRoll.filter(
+        (r) =>
+          r.tdNo.toLowerCase().includes(cleanValidationQuery) ||
+          r.tdNo.toLowerCase().replace(/[-\s]/g, '').includes(normValidationQuery) ||
+          r.pin.toLowerCase().includes(cleanValidationQuery) ||
+          r.pin.toLowerCase().replace(/[-\s]/g, '').includes(normValidationQuery) ||
+          r.ownerFull.toLowerCase().includes(cleanValidationQuery) ||
+          r.ownerMasked.toLowerCase().includes(cleanValidationQuery)
+      )
+    : [];
+
+  const validateMatchedRow = (match: AssessmentRollRow) => {
+    setValidateTdInput(match.tdNo);
+    setMultiMatchPrompt(false);
+    setValidatedResult({
+      found: true,
+      tdNo: match.tdNo,
+      owner: match.ownerFull,
+      pin: match.pin,
+      barangay: match.barangay,
+      assessedValue: match.assessedValue,
+      letterRef: letterRequestRef.trim() || undefined
+    });
+    pushToast(
+      'Tax Declaration Validated',
+      `${match.tdNo} (${match.ownerFull}) verified active under RA 7160 Sec. 197–198.`,
+      'success'
+    );
+  };
 
   // Service 2: PIN / ARP Assignment
   const [barangayCode, setBarangayCode] = useState('01');
@@ -38,24 +74,35 @@ export const ViewValidationPinId: React.FC = () => {
   const [ocDocRef, setOcDocRef] = useState('');
   const [ocDate, setOcDate] = useState('');
 
+  const sortedOcularRequests = [...ocularRequests].sort((a, b) => {
+    const oa = a.status === 'Scheduled (1-Day SLA)' ? 1 : 2;
+    const ob = b.status === 'Scheduled (1-Day SLA)' ? 1 : 2;
+    return oa !== ob ? oa - ob : a.scheduledDate.localeCompare(b.scheduledDate);
+  });
+
   const handleValidateTd = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = validateTdInput.trim().toLowerCase();
-    if (!q) return;
-    const match = assessmentRoll.find((r) => r.tdNo.toLowerCase() === q);
-    if (match) {
-      setValidatedResult({
-        found: true,
-        tdNo: match.tdNo,
-        owner: match.ownerFull,
-        pin: match.pin,
-        barangay: match.barangay,
-        assessedValue: match.assessedValue
-      });
-      pushToast('Tax Declaration Validated', `${match.tdNo} verified active under RA 7160 Sec. 197–198.`, 'success');
-    } else {
-      setValidatedResult({ found: false, tdNo: validateTdInput.trim() });
+    if (!cleanValidationQuery) return;
+    const exactTdMatch = assessmentRoll.find(
+      (r) =>
+        r.tdNo.toLowerCase() === cleanValidationQuery ||
+        r.tdNo.toLowerCase().replace(/[-\s]/g, '') === normValidationQuery
+    );
+    if (exactTdMatch) {
+      validateMatchedRow(exactTdMatch);
+      return;
     }
+    if (validationMatches.length === 1) {
+      validateMatchedRow(validationMatches[0]);
+      return;
+    }
+    if (validationMatches.length > 1) {
+      setValidatedResult(null);
+      setMultiMatchPrompt(true);
+      return;
+    }
+    setMultiMatchPrompt(false);
+    setValidatedResult({ found: false, tdNo: validateTdInput.trim() });
   };
 
   const handleScheduleOcular = (e: React.FormEvent) => {
@@ -127,21 +174,31 @@ export const ViewValidationPinId: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="val-td-no" className="block text-xs font-bold text-slate-800 mb-1">
-                  Tax Declaration No. to Validate
+                  Tax Declaration No. or Owner Name
                 </label>
-                <input
-                  id="val-td-no"
-                  type="text"
-                  placeholder="e.g. TD-26-0001"
-                  value={validateTdInput}
-                  onChange={(e) => setValidateTdInput(e.target.value)}
-                  className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900"
-                />
+                <div className="relative">
+                  <Search
+                    className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="val-td-no"
+                    type="text"
+                    placeholder="e.g. TD-26-0001 or Juan M. Dela Cruz"
+                    value={validateTdInput}
+                    onChange={(e) => {
+                      setValidateTdInput(e.target.value);
+                      setValidatedResult(null);
+                      setMultiMatchPrompt(false);
+                    }}
+                    className="w-full min-h-[42px] bg-white border border-slate-400 rounded-lg pl-9 pr-3 py-2 text-xs font-semibold text-slate-900"
+                  />
+                </div>
               </div>
 
               <div>
                 <label htmlFor="val-letter-ref" className="block text-xs font-bold text-slate-800 mb-1">
-                  Letter Request Reference / Date
+                  Letter Request Reference / Date (Optional)
                 </label>
                 <input
                   id="val-letter-ref"
@@ -154,9 +211,59 @@ export const ViewValidationPinId: React.FC = () => {
               </div>
             </div>
 
+            {/* Interactive Match Picker when searching by Owner Name, PIN, or partial TD */}
+            {cleanValidationQuery.length > 0 &&
+              validationMatches.length > 0 &&
+              !(validatedResult?.found && validatedResult.tdNo.toLowerCase() === cleanValidationQuery) && (
+                <div
+                  className={`rounded-xl border p-3 space-y-2 ${
+                    multiMatchPrompt
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-slate-50 border-slate-300'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
+                    <span>
+                      {multiMatchPrompt
+                        ? `Multiple properties match "${validateTdInput.trim()}". Select the exact target TD No. to validate:`
+                        : `Matching Property Records (${validationMatches.length}) — click to select target TD No.`}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-slate-200 bg-white rounded-lg border border-slate-300 max-h-56 overflow-y-auto">
+                    {validationMatches.map((row) => (
+                      <div
+                        key={row.tdNo}
+                        className="p-2.5 flex flex-wrap items-center justify-between gap-2 hover:bg-slate-50 text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-slate-900">
+                            {row.ownerFull}{' '}
+                            <span className="font-mono text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded ml-1">
+                              {row.tdNo}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 font-mono">
+                            PIN {row.pin} • Brgy. {row.barangay} ({row.classification}) • AV ₱
+                            {row.assessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => validateMatchedRow(row)}
+                          className="min-h-[34px] px-3 py-1 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs shrink-0"
+                        >
+                          Select &amp; Validate
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             <button
               type="submit"
-              className="min-h-[44px] px-5 py-2.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-2"
+              disabled={!cleanValidationQuery}
+              className="min-h-[44px] px-5 py-2.5 bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-600 text-white rounded-lg text-xs font-bold flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4 text-emerald-400" aria-hidden="true" />
               <span>Verify &amp; Stamp Tax Declaration Validated</span>
@@ -185,6 +292,12 @@ export const ViewValidationPinId: React.FC = () => {
                     <strong className="font-mono">
                       ₱{validatedResult.assessedValue?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                     </strong>
+                    {validatedResult.letterRef ? (
+                      <>
+                        {' '}
+                        • Letter Ref: <span className="font-mono font-semibold">{validatedResult.letterRef}</span>
+                      </>
+                    ) : null}
                   </p>
                 </>
               ) : (
@@ -422,7 +535,7 @@ export const ViewValidationPinId: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {ocularRequests.map((req) => (
+                {sortedOcularRequests.map((req) => (
                   <tr key={req.id} className="hover:bg-slate-50">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{req.id}</td>
                     <td className="py-3 px-4">

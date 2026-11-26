@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { Landmark, Receipt, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useRpatis } from '../../context/RpatisContext';
+import { LienAnnotationRecord } from '../../types/rpatis';
 import { StatusChip } from '../common/StatusChip';
+
+const LIEN_STATUS_ORDER: Record<LienAnnotationRecord['status'], number> = {
+  'Pending Prov. Co-Sign': 1,
+  Annotated: 2,
+  Cancelled: 3
+};
 
 export const ViewLiensMortgages: React.FC = () => {
   const { assessmentRoll, lienAnnotations, recordLienAnnotation } = useRpatis();
@@ -13,6 +20,10 @@ export const ViewLiensMortgages: React.FC = () => {
   const [annotationOrNo, setAnnotationOrNo] = useState('');
 
   const selectedRow = assessmentRoll.find((r) => r.tdNo === selectedTd);
+  const sortedLiens = [...lienAnnotations].sort((a, b) => {
+    const diff = (LIEN_STATUS_ORDER[a.status] ?? 99) - (LIEN_STATUS_ORDER[b.status] ?? 99);
+    return diff !== 0 ? diff : b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
   const canSubmit =
     Boolean(selectedRow) &&
     mortgageeBank.trim().length > 0 &&
@@ -186,7 +197,7 @@ export const ViewLiensMortgages: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {lienAnnotations.map((row) => (
+              {sortedLiens.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{row.id}</td>
                   <td className="py-3 px-4">

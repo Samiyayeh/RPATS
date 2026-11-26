@@ -5,9 +5,17 @@ import { Screen3TreasuryDashboard } from './Screen3TreasuryDashboard';
 import { Screen3TreasuryBilling } from './Screen3TreasuryBilling';
 import { Screen3TreasuryCashier } from './Screen3TreasuryCashier';
 import { Screen3TreasuryClearance } from './Screen3TreasuryClearance';
+import { CollapsibleSidebarLayout } from './layout/CollapsibleSidebarLayout';
+
+const TREASURY_VIEW_LABELS: Record<'dashboard' | 'billing' | 'cashier' | 'clearance', string> = {
+  dashboard: 'Dashboard & Roll Ledger',
+  billing: 'Tax Billing Calculator',
+  cashier: 'Cashier Window #3',
+  clearance: 'Tax Clearance & Form 56'
+};
 
 export const Screen3Treasury: React.FC = () => {
-  const { currentUser, assessmentRoll } = useRpatis();
+  const { assessmentRoll } = useRpatis();
   const [activeMenu, setActiveMenu] = useState<'dashboard' | 'billing' | 'cashier' | 'clearance'>('dashboard');
   const [selectedTdNo, setSelectedTdNo] = useState<string>('TD-26-04912');
   const [billingNetDue, setBillingNetDue] = useState<number>(1944);
@@ -17,27 +25,15 @@ export const Screen3Treasury: React.FC = () => {
   const activeRow = assessmentRoll.find((r) => r.tdNo === selectedTdNo) || assessmentRoll[0];
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 w-full bg-slate-50 text-slate-900">
-      {/* Municipal Treasury Sidebar */}
-      <aside
-        aria-label="Municipal Treasury Navigation"
-        className="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-300 flex flex-col justify-between shrink-0"
-      >
-        <div className="p-4 space-y-4">
-          <div className="pb-3 border-b border-slate-200 space-y-2">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-emerald-900">
-                Municipal Treasury
-              </div>
-              <div className="text-xs text-slate-600 mt-0.5 font-medium">
-                Land Tax Billing &amp; Cashiering
-              </div>
-            </div>
-
-            <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-500 text-emerald-950 text-xs font-bold px-2.5 py-1 rounded-full w-full">
-              <span className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse" aria-hidden="true" />
-              <span>Assessor Bridge: Active</span>
-            </div>
+    <CollapsibleSidebarLayout
+      ariaLabel="Municipal Treasury Navigation"
+      sidebarSubtitle="Pasacao • Land Tax Billing & Cashiering"
+      activeSectionLabel={TREASURY_VIEW_LABELS[activeMenu]}
+      sidebarContent={
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-500 text-emerald-950 text-xs font-bold px-2.5 py-1 rounded-full w-full">
+            <span className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse" aria-hidden="true" />
+            <span>Assessor Bridge: Active</span>
           </div>
 
           <nav className="space-y-1.5">
@@ -67,59 +63,59 @@ export const Screen3Treasury: React.FC = () => {
             })}
           </nav>
         </div>
+      }
+    >
+      {activeMenu === 'dashboard' && (
+        <Screen3TreasuryDashboard
+          onSelectRow={(tdNo) => {
+            setSelectedTdNo(tdNo);
+            const found = assessmentRoll.find((r) => r.tdNo === tdNo);
+            if (found) setBillingNetDue(Math.round(found.totalTaxDue * 0.9));
+            setActiveMenu('billing');
+          }}
+        />
+      )}
 
-        <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-900">Active Cashier Terminal</div>
-          <div>{currentUser?.name}</div>
-          <div className="font-mono text-slate-600">{currentUser?.employeeId}</div>
-        </div>
-      </aside>
+      {activeMenu === 'billing' && (
+        <Screen3TreasuryBilling
+          row={activeRow}
+          onSelectRow={(tdNo) => {
+            setSelectedTdNo(tdNo);
+            const found = assessmentRoll.find((r) => r.tdNo === tdNo);
+            if (found) setBillingNetDue(Math.round(found.totalTaxDue * 0.9));
+          }}
+          onProceedToCashier={(netDue) => {
+            setBillingNetDue(netDue);
+            setActiveMenu('cashier');
+          }}
+        />
+      )}
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        {activeMenu === 'dashboard' && (
-          <Screen3TreasuryDashboard
-            onSelectRow={(tdNo) => {
-              setSelectedTdNo(tdNo);
-              const found = assessmentRoll.find((r) => r.tdNo === tdNo);
-              if (found) setBillingNetDue(Math.round(found.totalTaxDue * 0.9));
-              setActiveMenu('billing');
-            }}
-          />
-        )}
+      {activeMenu === 'cashier' && (
+        <Screen3TreasuryCashier
+          row={activeRow}
+          netDue={billingNetDue}
+          onSelectRow={(tdNo, computedNetDue) => {
+            setSelectedTdNo(tdNo);
+            setBillingNetDue(computedNetDue);
+          }}
+          onPaymentSettled={(orNo, clearanceNo) => {
+            setIssuedOrNo(orNo);
+            setIssuedClearanceNo(clearanceNo);
+            setActiveMenu('clearance');
+          }}
+        />
+      )}
 
-        {activeMenu === 'billing' && (
-          <Screen3TreasuryBilling
-            row={activeRow}
-            onProceedToCashier={(netDue) => {
-              setBillingNetDue(netDue);
-              setActiveMenu('cashier');
-            }}
-          />
-        )}
-
-        {activeMenu === 'cashier' && (
-          <Screen3TreasuryCashier
-            row={activeRow}
-            netDue={billingNetDue}
-            onPaymentSettled={(orNo, clearanceNo) => {
-              setIssuedOrNo(orNo);
-              setIssuedClearanceNo(clearanceNo);
-              setActiveMenu('clearance');
-            }}
-          />
-        )}
-
-        {activeMenu === 'clearance' && (
-          <Screen3TreasuryClearance
-            row={activeRow}
-            orNo={issuedOrNo}
-            clearanceNo={issuedClearanceNo}
-            amountPaid={billingNetDue}
-            onReturnToDashboard={() => setActiveMenu('dashboard')}
-          />
-        )}
-      </div>
-    </div>
+      {activeMenu === 'clearance' && (
+        <Screen3TreasuryClearance
+          row={activeRow}
+          orNo={issuedOrNo}
+          clearanceNo={issuedClearanceNo}
+          amountPaid={billingNetDue}
+          onReturnToDashboard={() => setActiveMenu('dashboard')}
+        />
+      )}
+    </CollapsibleSidebarLayout>
   );
 };

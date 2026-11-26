@@ -124,7 +124,7 @@ export const Screen4CitizenPortal: React.FC = () => {
   const currentStage = matchedDocket
     ? matchedDocket.status === 'Paid'
       ? 5
-      : matchedDocket.status === 'Approved'
+      : matchedDocket.status === 'Approved' || matchedDocket.status === 'Ready for Sign-Off'
       ? 4
       : matchedDocket.status === 'Under Technical Review' ||
         matchedDocket.status === 'At Capitol' ||
