@@ -503,88 +503,183 @@ Main Certificate Container (Centered, 780px width, Background #FFFFFF, border 2p
 
 ---
 
-## Phase 2 — Iterative HCI Redesign, WCAG 2.2 AA Remediation & Real-Life Rebuild Prompts
-
-### Prompt 1 — Full HCI Document Analysis (Zero Hallucination)
-> `now lets rebuild this website base on Docment in HCI@[c:\Users\samca\OneDrive\Desktop\Documents\Desktop\HCI_RAPTS\Document] so first i want you to analyze this docments dont miss anything and do shortcut to analze this document and i want you only fucos on this document dont do any halusination just follow the Document and is there any confirmation ask me`
-
-- **Outcome:** Extracted and analyzed all HCI documents (`GRP 23 - RPATIS- CAMRINES SUR.pdf`, `Design_recomendation.pdf`, `GROUP 23_Case Study & UX Laws Evaluation.pdf`, `GRP23_Accessibility_UX_Case_Study_WCAG2.2.pdf`, `GRP23_Figma_Slide_Deck_Accessibility_UX_Case_Study.pdf`, both ISO 9241-210 `.docx` case studies, and `Assessment_Roll.tsv` / `Treasurer_Collections.tsv`). Mapped all 26 design findings, 12 WCAG 2.2 POUR issues, 5 UX Laws, and target personas.
+## Phase 2 — Iterative HCI Redesign, WCAG 2.2 AA Remediation & Production Architecture
 
 ---
 
-### Prompt 2 — Role-Based Navigation & User-Centered Planning
-> `/plan about the navigation make it into rolebase because this current design is for presentaion only thats why we are redesigning it, so now help me create the plan on how we will make the website perfect and user centered`
-
-- **Outcome:** Reviewed `rubrics.md` and created the implementation plan (`plan_role_based_rpatis.md`) transitioning from a 4-tab presentation switcher to an authentic role-based architecture across Municipal Assessor, Provincial Capitol, Municipal Treasury, and Public Citizen Portal.
-
----
-
-### Prompt 3 — Municipal Assessor Services Inquiry
-> `what services does the municipal assesors have?`
-
-- **Outcome:** Listed the statutory Municipal Assessor services documented in the project specifications (Discovery, Transfer, Reassessment, Cancellation, FAAS & Building Sub-Components, e-TD generation, 1949 Archive Search, Capitol Endorsement, and Treasury Roll Sync).
+### Prompt 1 — Comprehensive HCI & Accessibility Research Synthesis (Zero-Hallucination Grounding)
+```text
+Conduct a comprehensive, zero-shortcut audit of all project research, accessibility evaluations, and dataset artifacts inside the `Document/` directory. Synthesize all findings strictly from the source files without introducing unverified assumptions:
+- Extract every empirical finding, UX law evaluation, and remediation item across `Design_recomendation.pdf` (26 expert findings), `GROUP 23_Case Study & UX Laws Evaluation.pdf`, `GRP23_Accessibility_UX_Case_Study_WCAG2.2.pdf` (12 POUR issue clusters), `WCAG 2.2 CHECKLIST.pdf`, and both ISO 9241-210 case study manuscripts.
+- Cross-check all authentic LGU Pasacao property parcels, tax roll figures, and collection records from `Assessment_Roll.tsv` and `Treasurer_Collections.tsv`.
+- Identify any conflicting data, design gaps, or open confirmation items prior to architectural planning.
+```
+- **Outcome:** Mapped all 26 design findings, 12 WCAG 2.2 AA POUR clusters, 5 Laws of UX, target municipal & PWD personas, and authentic Pasacao datasets into a verified redesign specification.
 
 ---
 
-### Prompt 4 — Approval of Role-Based Plan
-> *(Approved `plan_role_based_rpatis.md`)*
-
-- **Outcome:** Implemented `RpatisContext`, `LoginGateway`, `RoleLayout`, `AuthenticQrCode`, `StatusChip`, and rebuilt all office modules to resolve the 26 findings and WCAG 2.2 AA requirements.
-
----
-
-### Prompt 5 — Full-Screen Edge-to-Edge Layout
-> `can you make it full screen instead of card`
-
-- **Outcome:** Removed outer card wrappers and max-width constraints in `RoleLayout.tsx`, `LoginGateway.tsx`, and all office screens so the application renders full-screen edge-to-edge.
+### Prompt 2 — Role-Based User-Centered Architecture Plan (ISO 9241-210 & WCAG 2.2 AA)
+```text
+Re-architect RPAT-IOSS from a single-page presentation switcher into a user-centered, role-based civic-tech system aligned with `rubrics.md`, ISO 9241-210, and WCAG 2.2 Level AA:
+- Draft an end-to-end implementation plan detailing:
+  1. Role-based Employee ID authentication (`LoginGateway`) routing staff directly to their authorized Municipal Assessor, Provincial Capitol, or Municipal Treasury workspace.
+  2. Real-time reactive state (`RpatisContext`) synchronizing appraisals, Capitol endorsements, cryptographic SHA-256 CIS approvals, and Form 56 Treasury payments across offices.
+  3. Full POUR accessibility remediation (Multi-Cue Status Chips with ≥ 4.5:1 contrast, semantic HTML5 tables/landmarks, 44px+ interactive targets, `aria-live="polite"` sync toasts, 1-click fuzzy search recovery, and two-step financial confirmation modals).
+```
+- **Outcome:** Produced `plan_role_based_rpatis.md`, then implemented `RpatisContext`, `LoginGateway`, `RoleLayout`, `AuthenticQrCode`, `StatusChip`, and rebuilt all office modules.
 
 ---
 
-### Prompt 6 — Real-Life Production Mode vs. Separate Demo Mode
-> `and also dont think it like we are developing for demo think like we are developing it for reallfe use so i want you to remove any demo related features and maybe create another for demo only\`
-
-- **Outcome:** Removed persona quick-fill cards, in-app role switcher, test buttons, sample docket chips, and internal `(Finding [#])` / `(WCAG)` / `(FR#)` labels from production views. Created an isolated `DemoPresenterBar.tsx` that loads **only** on `/?demo=1`.
-
----
-
-### Prompt 7 — Standalone Public Citizen Portal Path
-> `also remove the public portal naviagation in the login system and make it as standalone navigatable true path only`
-
-- **Outcome:** Removed the Public Citizen Portal link/card from the internal staff login page (`/`) and separated the Citizen Portal into its own standalone public route (`/citizen`, also `/portal` and `/track`).
+### Prompt 3 — Full-Screen Edge-to-Edge Enterprise Viewport Layout
+```text
+Refactor the entire application shell—including the staff authentication gateway, role-based office workspaces, and citizen portal—from boxed centered cards into a crisp, full-screen edge-to-edge layout (`w-full`, `min-h-screen`) optimized for 1440×900 desktop government terminals while preserving clean responsive breakpoints.
+```
+- **Outcome:** Removed constrained outer wrappers across `RoleLayout.tsx`, `LoginGateway.tsx`, and all workspace views to maximize usable data density and table legibility.
 
 ---
 
-### Prompt 8 — Audit of Built Municipal Assessor Services
-> `what services does our munical assecors currently have?`
-
-- **Outcome:** Audited all implemented Municipal Assessor features and identified remaining real-life gaps.
-
----
-
-### Prompt 9 — Citizen's Charter Frontline Services Analysis
-> `@[c:\Users\samca\OneDrive\Desktop\Documents\Desktop\HCI_RAPTS\Document\ServicesDocu] analyze this to check for current services ingnore @[c:\Users\samca\OneDrive\Desktop\Documents\Desktop\HCI_RAPTS\Document\ServicesDocu\CurentSystem]`
-
-- **Outcome:** Visually read and transcribed all 7 Citizen's Charter photos of the Office of the Municipal Assessor (Camarines Sur), auditing all **11 official frontline services**, response times, fees, and 3-track Transfer requirements against the current system.
+### Prompt 4 — Production Environment Isolation vs. Presentation Sandbox (`/?demo=1`)
+```text
+Refactor all primary UI views strictly for real-life LGU production deployment:
+- Remove all presentation-only shortcuts, one-click persona autofill cards, in-app role switchers, sample test chips, and internal academic annotations (`(Finding [#])`, `(WCAG)`, `(FR#)`) from standard production routes.
+- Isolate presentation walkthrough controls into a dedicated `DemoPresenterBar` component that mounts exclusively when `?demo=1` is explicitly passed in the URL.
+```
+- **Outcome:** Hardened production views for authentic staff deployment while preserving an isolated `/?demo=1` presenter bar for defense walkthroughs.
 
 ---
 
-### Prompt 10 — Plan for Complete 11 Frontline Services
-> `/plan yes but show me the plan`
-
-- **Outcome:** Created `plan_assessor_frontline_services.md` grouping all 11 services cleanly into 3 sidebar sections (*Appraisal & Endorsement*, *Frontline Counter Services*, and *Archives, Rates & Disputes*) per Hick's Law.
-
----
-
-### Prompt 11 — Approval of 11 Frontline Services Plan
-> *(Approved `plan_assessor_frontline_services.md`)*
-
-- **Outcome:** Implemented `ViewCertifications.tsx`, `ViewLiensMortgages.tsx`, `ViewValidationPinId.tsx`, and `ViewProblemResolution.tsx`, added New Docket intake + 3-Track Transfer checklists in `Screen1Assessor.tsx`, and updated `/citizen` with all 6 Citizen's Charter checklists.
+### Prompt 5 — Standalone Public Citizen Portal Routing (`/citizen`)
+```text
+Enforce strict network and portal separation between internal LGU staff systems and public taxpayer access:
+- Remove all public tracking links and Citizen Portal toggles from the internal LGU Staff Login gateway (`/`).
+- Expose the Pasacao Citizen Real Property Portal exclusively via dedicated public paths (`/citizen`, `/portal`, and `/track`) with RA 10173 owner-name privacy masking.
+```
+- **Outcome:** Separated public self-service tracking cleanly onto standalone paths in `App.tsx`, enforcing zero public portal leakage on the staff authentication screen.
 
 ---
 
-### Prompt 12 — Rubric Self-Audit
-> `did we meet the perfect rbrics@[c:\Users\samca\OneDrive\Desktop\Documents\Desktop\HCI_RAPTS\rubrics.md]`
-
-- **Outcome:** Evaluated all 5 Exemplary criteria in `rubrics.md` and identified minor Treasury table horizontal overflow on `1440px` desktop.
+### Prompt 6 — Citizen's Charter 11 Official Municipal Assessor Frontline Services
+```text
+Audit every official Municipal Assessor frontline service documented in `Document/ServicesDocu/` (ignoring `CurentSystem/` legacy screenshots) against our implemented system:
+- Transcribe all 11 official Camarines Sur Citizen's Charter services, including service SLAs, statutory fees, documentary requirements, and the 3 Transfer tracks (*Standard Residential/Agricultural Sale*, *DAR EP/CLOA*, and *Extra-Judicial Settlement with Deed of Sale*).
+- Plan and implement complete digital workflows organized under Hick's Law into 3 clear sidebar groups (*Appraisal & Endorsement*, *Frontline Counter Services*, and *Archives, Rates & Disputes*).
+```
+- **Outcome:** Implemented `ViewCertifications.tsx`, `ViewLiensMortgages.tsx`, `ViewValidationPinId.tsx`, and `ViewProblemResolution.tsx`; added 3-track Transfer verification checklists in `Screen1Assessor.tsx`; and embedded all 6 Citizen's Charter readiness checklists in `Screen4CitizenPortal.tsx`.
 
 ---
+
+### Prompt 7 — Exemplary Rubric Self-Audit & 1440px Zero-Clipping Optimization
+```text
+Evaluate the live application strictly against all five Exemplary evaluation criteria in `rubrics.md` across a 1440×900 desktop viewport. Identify and resolve any layout overflow, horizontal table clipping, contrast issues, or workflow gaps before final verification.
+```
+- **Outcome:** Consolidated Treasury's Assessment Roll table into 8 non-clipping columns fitting cleanly at `1440px` without horizontal overflow, and verified `StatusChip` precedence (`Unpaid` always renders red `AlertTriangle`).
+
+---
+
+### Prompt 8 — Historical Cadastre Vault Naming, Digitization & Transfer-to-Modern Workflow
+```text
+Refine the archival module for real-life municipal operations:
+- Rename the legacy archive section cleanly to **Historical Cadastre Vault** across navigation labels, headings, and alerts.
+- Provide two structured, blank-by-default modal workflows inside the vault:
+  1. **Digitize Paper Ledger:** Ingest historical Spanish-era and pre-computerization tax declarations into the read-only vault.
+  2. **Transfer Record to Modern System:** Display the vintage record side-by-side (read-only) with a modern Property Record & FAAS transfer form that generates a live Assessment Roll row and Assessor Docket while preserving the original archive untouched.
+```
+- **Outcome:** Updated `ViewLegacyVault.tsx` and `RpatisContext.tsx` (`addLegacyRecord`, `migrateLegacyToModern`), ensuring state-safe transition directly into the FAAS Appraisal Engine.
+
+---
+
+### Prompt 9 — Blank-by-Default Operational Forms & Dedicated Property Records Register
+```text
+Audit every operational form across Assessor, Capitol, Treasury, and the Citizen Portal to enforce clean data entry:
+- Ensure all intake, search, billing, cashiering, certification, lien, ocular, problem-log, and FAAS fields initialize strictly blank (`''` or unchecked `false`) with clear placeholder guidance instead of pre-populated sample values.
+- Add a dedicated **Property Records (Roll)** view inside the Municipal Assessor workspace so staff can search, filter, and inspect all registered parcels and open any record directly in the FAAS Appraisal Engine.
+```
+- **Outcome:** Created `ViewAssessmentRoll.tsx` inside `Screen1Assessor.tsx` and cleared default hardcoded values across all operational forms.
+
+---
+
+### Prompt 10 — Complete RA 7160 Real Property Coverage (Land, Buildings, Structures & Machinery)
+```text
+Extend the FAAS Appraisal & Valuation Engine to record all four statutory real property classifications mandated under Republic Act 7160:
+1. Land Valuation (RA 7160 Sec. 218)
+2. Building Sub-Components
+3. **Other Permanent Structures & Improvements** (blank-by-default optional section with replacement cost, depreciation %, and statutory assessment level)
+4. **Machinery Appraisal** (RA 7160 Sec. 218(c) classification levels—Agricultural 40%, Residential 50%, Commercial/Industrial 80%—and Sec. 225 80% max depreciation / 20% residual floor)
+Ensure total market/assessed valuations persist cleanly on saved dockets, render item-by-item in the live Draft Tax Declaration preview, and display as declared property badges in Capitol's Dual-Pane Inspection FAAS tab.
+```
+- **Outcome:** Extended `rpatis.ts`, `Screen1Assessor.tsx`, and `Screen2CapitolInspection.tsx` so declarations can cover any combination of Land, Buildings, Other Permanent Structures, and Machinery.
+
+---
+
+### Prompt 11 — Sidebar-First Full-Height Shell & Content Focus Mode
+```text
+Streamline the desktop workspace chrome for maximum viewport efficiency and distraction-free content focus:
+- Remove the top global header bar and remove the visual `Session: 15m lock` timer badge.
+- Move the office brand icon, `RPAT-IOSS` badge, department title, and sync indicator to the top of the left sidebar, and anchor the interactive user profile & Sign Out popover flush to the bottom of a full-height (`100dvh`) non-clipped sidebar (`CollapsibleSidebarLayout`).
+- Use a unified 3-bar (`Menu`) icon button (plus `Ctrl+B` shortcut) to collapse and expand the navigation sidebar into full-width Content Focus Mode.
+```
+- **Outcome:** Removed the header from `RoleLayout.tsx`, created `CollapsibleSidebarLayout.tsx`, locked the `100dvh` desktop flex chain in `index.css`, and unified all three office workspaces (`Screen1Assessor`, `Screen2Capitol`, `Screen3Treasury`).
+
+---
+
+### Prompt 12 — Action-Priority Sorting Across All Operational Tables & Queues
+```text
+Audit every operational table and record list across Municipal Assessor, Provincial Capitol, and Municipal Treasury, and enforce consistent action-first sorting (using non-mutating copies):
+- **Endorsement Queue:** `Needs Signature` (Eligible) → `Flagged` → `At Capitol` → `Under Technical Review` → `Ready for Sign-Off` → `Approved` → `Paid` → `Draft`.
+- **Assessment Roll & Treasury Ledger:** `Unpaid` → `Partial` → `Paid`.
+- **Capitol Queues:** Review/Flagged items first (`Under Technical Review` → `At Capitol` → `Ready for Sign-Off` → `Flagged`), with completed items at the bottom.
+- **Counter Services, SMV Matrix & Historical Vault:** Pending/Open items first, statutory classification order for SMV, and chronological vintage TD order for archives.
+```
+- **Outcome:** Applied deterministic priority + natural numeric tie-break sorting across all 11 operational tables and queues (`ViewEndorsementQueue`, `ViewAssessmentRoll`, `Screen3TreasuryDashboard`, `Screen2CapitolMasterQueue`, `Screen4CapitolDeficiencyTracker`, `ViewCertifications`, `ViewLiensMortgages`, `ViewValidationPinId`, `ViewProblemResolution`, `ViewSmvMatrix`, `ViewLegacyVault`).
+
+---
+
+### Prompt 13 — Name-to-TD Tax Declaration Lookup & Certification Preview Cleanup
+```text
+Enhance Municipal Assessor counter usability:
+1. In **Tax Declaration Validation**, allow clerks to search by **Owner Name, PIN, or TD No.** and display matching parcels with owner details so the clerk can pinpoint and validate the exact target Tax Declaration number (especially when an owner holds multiple parcels).
+2. In **Certifications & CTC**, remove the manual bottom signature block from the printable certificate preview card, keeping only the official certificate text, serial/OR metadata, and cryptographic verification QR code.
+```
+- **Outcome:** Upgraded `ViewValidationPinId.tsx` with live multi-match person-to-TD selection and simplified the printable certificate footer in `ViewCertifications.tsx`.
+
+---
+
+### Prompt 14 — Dynamic Provincial SMV Schedule Updates via Official Notice / Ordinance
+```text
+Convert the Provincial Schedule of Base Market Values (`SMV Matrix`) from a static reference table into a live, notice-driven schedule:
+- Store `smvRates`, `activeSmvNotice`, and an immutable `smvRevisions` audit log inside `RpatisContext`.
+- Add an **Update SMV from New Notice** workflow modal (and per-row **Revise** action) with blank-by-default fields supporting both **Revise Existing Sub-Class** and **Add New Sub-Class** under a new Provincial Ordinance or Memorandum Circular.
+- Synchronize updated unit values, assessment levels, and governing notice citations immediately into the FAAS Appraisal Engine.
+```
+- **Outcome:** Added `SmvRateEntry` / `SmvNoticeRevision` types, context actions (`updateSmvFromNotice`), notice modal + revision log in `ViewSmvMatrix.tsx`, and live rate provenance lookup in `Screen1Assessor.tsx`.
+
+---
+
+### Prompt 15 — Capitol Dual-Pane Docket Switcher & Full-Width CIS Sign-Off Workspace
+```text
+Optimize the Provincial Capitol examiner and chief approver workflow:
+1. Inside **Dual-Pane Inspection**, add an inline queued docket selector (`Select Queued Docket`) with `Prev` / `Next` controls and automatic checklist state reset on docket change.
+2. Introduce a formal `'Ready for Sign-Off'` status when forwarding from Dual-Pane Inspection.
+3. Redesign **CIS Sign-Off & Seal** into a full-width two-column workspace strictly filtered to **only dockets marked for Sign-Off** (plus an **Issued CIS Seals** history tab and sidebar counter badge), and ensure CIS issuance atomically syncs approved parcels into the Treasury Assessment Roll.
+```
+- **Outcome:** Added `Ready for Sign-Off` state across types, `StatusChip`, and `RpatisContext` (fixing async state batching in `approveAndIssueCis`), added the Dual-Pane docket switcher in `Screen2CapitolInspection.tsx`, and rebuilt `Screen3CapitolSignoff.tsx`.
+
+---
+
+### Prompt 16 — Collectible-Only Treasury Roll Pickers & Payor Auto-Fill in Cashier Window #3
+```text
+Streamline RPT collection across Treasury Billing and Cashiering:
+- Embed a clean searchable roll picker inside **Tax Billing Calculator** displaying **only collectible accounts (`Unpaid` / `Partial`)** with `Paid` accounts excluded and no unnecessary status toggle clutter.
+- Embed a matching searchable collectible-account queue inside **Cashier Window #3** with unique per-TD candidate clearance serials, and auto-fill the **Payor Name** field automatically from the selected taxpayer record when proceeding from Billing or switching accounts.
+```
+- **Outcome:** Built clean collectible roll pickers inside `Screen3TreasuryBilling.tsx` and `Screen3TreasuryCashier.tsx` wired via `Screen3Treasury.tsx`, with automatic payor name pre-fill and blank tendered-amount safety.
+
+---
+
+### Prompt 17 — Full-Stack Audit & Node.js / Express + MySQL Backend Architecture Plan
+```text
+Audit every workflow across the frontend to catalog real functional bugs vs. prototype limitations, then architect a complete production backend implementation plan (`BACKEND_PLAN.md`) using **Node.js, Express 5, TypeScript, and MySQL (`mysql2/promise`)**:
+- Specify a normalized 17-table InnoDB schema using `DECIMAL(14,2)` precision across all 4 property kinds, Capitol CIS seals, Form 56 payments, PIN reservations, attachments, Legacy archives, and COA audit logs.
+- Define REST endpoints, multipart file uploads, bcrypt + `HttpOnly` JWT RBAC middleware, server-side RA 7160 valuation/SHA-256 verification, and `<1s` SSE cross-office synchronization, plus remediation plans for all audited functional gaps.
+```
+- **Outcome:** Audited 8 code-level functional gaps and documented the complete backend blueprint in `BACKEND_PLAN.md` ahead of full-stack implementation.
