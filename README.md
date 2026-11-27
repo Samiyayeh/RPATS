@@ -70,6 +70,10 @@ Reconciled Q1 billing window, Zeigarnik collection progress indicator, persisten
 Accessible directly without login; provides live 5-stage inter-office docket tracking (RA 10173 privacy-masked) and the complete Citizen's Charter Requirements Pre-Screening Checklist.
 ![Standalone Public Citizen Portal](docs/screenshots/06-citizen-portal.png)
 
+### 7. Municipal Assessor (Module 4) — Cadastral Land Parcel Registry & Interactive GIS Tax Map
+Live georeferenced Leaflet GIS map of Pasacao (`Cad. 544-D`) with CARTO Voyager / Esri Satellite / Minimal basemaps, RA 7160 land classification & tax status overlays, Standardized BLGF PIN generator, improvement-to-land linkage, discrepancy logger, and interactive parcel boundary plotting.
+![Municipal Assessor Cadastral Tax Map](docs/screenshots/07-assessor-cadastral-tax-map.jpg)
+
 ---
 
 ## 2. Human-Centered Design (ISO 9241-210) & Target Personas
@@ -164,7 +168,7 @@ The application separates real-life production usage from presentation demos:
 
 ## 7. Tech Stack & Local Setup
 
-- **Frontend:** React 19, TypeScript 5.7, Tailwind CSS v4, Lucide React, Vite 8
+- **Frontend:** React 19, TypeScript 5.7, Tailwind CSS v4, Leaflet, Lucide React, Vite 8
 - **State Management:** Reactive Inter-Office Context Store (`src/context/RpatisContext.tsx`) synchronizing Pasacao Assessor, Pili Capitol, Pasacao Treasury, and the Public Citizen Portal in real time.
 
 ```bash
